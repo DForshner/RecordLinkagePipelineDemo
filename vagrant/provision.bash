@@ -6,7 +6,7 @@ set -e
 vagrant_dir=/vagrant/vagrant
 bashrc=/home/vagrant/.bashrc
 
-echo "--- Provisioning - Start ---"
+echo "\e[92m --- provision.bash - Start --- \e[0m"
 
 # ----------------------------------------------- GPC signing key
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
@@ -20,11 +20,8 @@ sudo apt-get update
 # ----------------------------------------------- Install Mono
 sudo apt-get -y install mono-devel
 
-# ----------------------------------------------- Compile 
+# ----------------------------------------------- Compile & Run
 cd /vagrant/vagrant
-mcs HelloWorld.cs
+./build_and_run.bash
 
-# ----------------------------------------------- Run 
-./HelloWorld.exe
-
-echo "--- Provisioning - End ---"
+echo "\e[92m --- provision.bash - End --- \e[0m"
