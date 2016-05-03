@@ -48,15 +48,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Analysis\CanonicalManufacturerNameGenerator.cs" />
+    <Compile Include="Analysis\TokenProbablityPerListingCalculator.cs" />
     <Compile Include="Analysis\SimilarityAliasGenerator.cs" />
     <Compile Include="Analysis\DeterministicAliasGenerator.cs" />
     <Compile Include="Analysis\IManufacturerNameAliasGenerator.cs" />
     <Compile Include="Extraction\IngestListingFile.cs" />
     <Compile Include="Extraction\IngestProductFile.cs" />
+    <Compile Include="Extraction\Munger.cs" />
     <Compile Include="Infrastructure\IListDoubleExtensions.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
     <Compile Include="Infrastructure\IListDecimalExtensions.cs" />
     <Compile Include="Matching\ManufacturerProductsBlockGrouper.cs" />
+    <Compile Include="Pruning\TermUniquenessDistributionPruner.cs" />
     <Compile Include="Pruning\ProductMatchCostOutlierPruner.cs" />
     <Compile Include="Pruning\DeterministicAccessoryPruner.cs" />
     <Compile Include="Pruning\IListingPruner.cs" />
@@ -66,7 +70,7 @@
     <Compile Include="Shared\ManufacturerNameAlias.cs" />
     <Compile Include="Shared\Listing.cs" />
     <Compile Include="Shared\ManufacturerNameListingsBlock.cs" />
-    <Compile Include="Matching\ProductMatcher.cs" />
+    <Compile Include="Matching\ProductModelMatcher.cs" />
     <Compile Include="Matching\ManufacturerListingsBlockGrouper.cs" />
     <Compile Include="Shared\Product.cs" />
     <Compile Include="Extraction\ListingParser.cs" />

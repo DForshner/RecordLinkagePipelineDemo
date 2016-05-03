@@ -6,7 +6,7 @@ namespace Pipeline.Infrastructure
 {
     public static class IListDoubleExtensions
     {
-        private static double FindPercentile(this IList<double> vals, double percentile)
+        public static double FindPercentile(this IList<double> vals, double percentile)
         {
             Debug.Assert(percentile >= 0D && percentile <= 1D, "Expected in range [0, 1]");
 

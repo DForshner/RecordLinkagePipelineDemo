@@ -6,23 +6,20 @@ namespace Pipeline.Pruning
     /// <summary>
     /// Removes accessory listings using deterministic rules.
     /// </summary>
-    public class DeterministicAccessoryPruner
+    public class DeterministicAccessoryPruner : IListingPruner
     {
-        IEnumerable<Listing> Prune(ICollection<Product> products, ICollection<Listing> listings)
+        public bool ClassifyAsCamera(IDictionary<string, float> probablityPerToken, Listing listing)
         {
-            foreach(var listing in listings)
-            {
-                if (listing.Title.Contains("accessory"))
-                    continue;
+            if (listing.Title.Contains("accessory"))
+                return false;
 
-                if (listing.Title.Contains("bag"))
-                    continue;
+            if (listing.Title.Contains("bag"))
+                return false;
 
-                if (listing.Title.Contains("case"))
-                    continue;
+            if (listing.Title.Contains("case"))
+                return false;
 
-                yield return listing;
-            }
+            return true;
         }
     }
 }

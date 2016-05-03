@@ -5,6 +5,6 @@ namespace Pipeline.Pruning
 {
     public interface IListingPruner
     {
-        IEnumerable<Listing> Prune(ICollection<Product> products, ICollection<Listing> listings);
+        bool ClassifyAsCamera(IDictionary<string, float> probablityPerToken, Listing listing);
     }
 }
