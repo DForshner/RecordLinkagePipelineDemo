@@ -1,7 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Pipeline;
+using Pipeline.Analysis;
 using Pipeline.Extraction;
+using Pipeline.Pruning;
 
 namespace Processor
 {
@@ -9,26 +12,49 @@ namespace Processor
     {
         static void Main(string[] args)
         {
-            // TODO: Find some cleaner way of doing this.
+            // TODO: Mono's PWD is different that .Net's. Find a cleaner way of doing this.
             if (!IsMono())
             {
                 Directory.SetCurrentDirectory("../../../");
             }
 
-            var products = new IngestProductFile().Ingest("./Resources/products.txt");
-            var listings = new IngestListingFile().Ingest("./Resources/listings.txt", 500);
+            // TODO: Get file locations from args
+            var products = new IngestProductFile().Ingest("./Resources/products.txt").ToList();
+            var listings = new IngestListingFile().Ingest("./Resources/listings.txt", 1000).ToList();
 
-            Console.WriteLine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
-            Console.WriteLine(Environment.CurrentDirectory);
+            var pipeline = CreatedWiredUpPipeline();
+            var matches = pipeline.FindMatches(products, listings);
 
-            foreach(var prod in products)
+            foreach(var match in matches)
             {
-                Console.WriteLine("{0} {1}", prod.Manufacturer, prod.Model);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("------------------------------------------------ {0} {1}", match.Product.Manufacturer, match.Product.Model);
+
+                Console.ForegroundColor = ConsoleColor.White;
+                foreach(var listing in match.Listings)
+                {
+                    Console.WriteLine(listing.Manufacturer);
+                    Console.WriteLine(listing.Title);
+                }
             }
-            foreach(var listing in listings)
-            {
-                Console.WriteLine("{0} {1}", listing.Manufacturer, listing.Title);
-            }
+        }
+
+        /// <summary>
+        /// Wire up pipeline dependencies (aka. composition root)
+        /// </summary>
+        private static SimplePipeline CreatedWiredUpPipeline(bool fallbackAliasGenerator = false, bool fallbackAccessoryPruner = false, bool logToFile = false)
+        {
+            var logger = (logToFile)
+                // TODO: Log to file
+                ? (Action<string>)((string x) => { Console.ForegroundColor = ConsoleColor.Red; Console.WriteLine(x); Console.ForegroundColor = ConsoleColor.White; })
+                : (Action<string>)((string x) => { Console.ForegroundColor = ConsoleColor.Red; Console.WriteLine(x); Console.ForegroundColor = ConsoleColor.White; });
+
+            IManufacturerNameAliasGenerator aliasGenerator = (fallbackAliasGenerator)
+                ? (IManufacturerNameAliasGenerator)new DeterministicAliasGenerator() : (IManufacturerNameAliasGenerator)new SimilarityAliasGenerator();
+            IListingPruner accessoryPruner = (fallbackAccessoryPruner)
+                ? (IListingPruner)new DeterministicAccessoryPruner() : (IListingPruner)new TermUniquenessDistributionPruner();
+
+            return new SimplePipeline(logger, aliasGenerator, accessoryPruner);
         }
 
         public static bool IsMono()

@@ -2,81 +2,154 @@
 using System.Collections.Generic;
 using System.Linq;
 using Pipeline.Analysis;
+using Pipeline.Extraction;
+using Pipeline.Matching;
+using Pipeline.Pruning;
 using Pipeline.Shared;
 
 namespace Pipeline
 {
+    /// <summary>
+    /// Composition layer that coordinates the matching of listings to products
+    /// </summary>
     public class SimplePipeline
     {
-        public IEnumerable<ProductMatch> FindMatches(IEnumerable<Product> products, IEnumerable<Listing> listings)
+        private readonly Action<string> _logWarning;
+        private readonly IManufacturerNameAliasGenerator _aliasGenerator;
+        private readonly IListingPruner _accessoryPruner;
+
+        public SimplePipeline(Action<string> logWarning, IManufacturerNameAliasGenerator aliasGenerator, IListingPruner accessoryPruner)
         {
-            var productByManu = new Dictionary<string, List<Product>>();
-            foreach (var product in products)
-            {
-                if (!productByManu.ContainsKey(product.Manufacturer))
-                {
-                    productByManu.Add(product.Manufacturer, new List<Product>());
-                }
-                productByManu[product.Manufacturer].Add(product);
-            }
+            _aliasGenerator = aliasGenerator;
+            _accessoryPruner = accessoryPruner;
+            _logWarning = logWarning;
+        }
 
-            var listingByManu = new Dictionary<string, List<Listing>>();
-            foreach (var name in productByManu.Keys)
-            {
-                listingByManu.Add(name, new List<Listing>());
-            }
+        public IEnumerable<ProductMatch> FindMatches(ICollection<Product> products, ICollection<Listing> listings)
+        {
+            var mungedProducts = products.Select(Munge).ToList();
 
-            foreach (var listing in listings)
+            var mungedListings = listings.Select(Munge).ToList();
+
+            var probablityPerToken = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(mungedListings);
+
+            var canonicalManufacturerNames = new CanonicalManufacturerNameGenerator().Generate(mungedProducts);
+
+            var listingBlocks = BlockListingsByManufacturer(mungedProducts, mungedListings, canonicalManufacturerNames);
+
+            var productBlocks = BlockProductsByManufacturer(mungedProducts, canonicalManufacturerNames);
+
+            var possibleMatches = MatchProductsToListings(listingBlocks, productBlocks);
+
+            var matches = Prune(probablityPerToken, possibleMatches).ToList();
+
+            return matches;
+        }
+
+        /// <summary>
+        /// TODO: Should probably be done while reading from file to reduce string object lifetime
+        /// </summary>
+        private static Listing Munge(Listing original)
+        {
+            return new Listing
             {
-                var tokens = listing.Manufacturer.Split(null);
-                foreach (var token in tokens)
+                Manufacturer = Munger.Munge(original.Manufacturer),
+                Title = Munger.Munge(original.Title),
+            };
+        }
+
+        /// <summary>
+        /// TODO: Should probably be done while reading from file to reduce string object lifetime
+        /// </summary>
+        private static Product Munge(Product original)
+        {
+            return new Product
+            {
+                Manufacturer = Munger.Munge(original.Manufacturer),
+                Model = Munger.Munge(original.Model),
+            };
+        }
+
+        private IEnumerable<ProductMatch> Prune(IDictionary<string, float> probablityPerToken, IEnumerable<ProductMatch> possibleMatches)
+        {
+            // TODO: Get rates from file
+            // TODO: Add time ranges rate is valid for
+            var rates = new []
+            {
+                new ExchangeRate { SourceCurrencyCode = "USD", DestinationCurrencyCode = "CAD", Rate = 1.25M },
+                new ExchangeRate { SourceCurrencyCode = "EUR", DestinationCurrencyCode = "CAD", Rate = 3.0M }
+            };
+
+            foreach(var match in possibleMatches)
+            {
+                var listings = new List<Listing>();
+
+
+                foreach (var listing in match.Listings)
                 {
-                    if (listingByManu.ContainsKey(token))
+                    var score = 0;
+                    if (_accessoryPruner.ClassifyAsCamera(probablityPerToken, listing))
                     {
-                        listingByManu[token].Add(listing);
-                        break;
+                        score += 50;
+                    }
+
+                    // TODO: Fix this API
+                    if (new ProductMatchCostOutlierPruner(rates).Prune(new[] { match }).Any())
+                    {
+                        score += 50;
+                    }
+
+                    if (score <= 50)
+                    {
+                        yield return match;
                     }
                 }
-            }
 
-            foreach (var name in productByManu.Keys)
+                yield return new ProductMatch(match.Product, listings);
+            }
+        }
+
+        private IEnumerable<ManufacturerNameProductsBlock> BlockProductsByManufacturer(ICollection<Product> products, HashSet<string> canonicalManufacturerNames)
+        {
+            var productBlockGrouper = new ManufacturerProductsBlockGrouper();
+            return productBlockGrouper.Match(products, canonicalManufacturerNames);
+        }
+
+        private IEnumerable<ManufacturerNameListingsBlock> BlockListingsByManufacturer(ICollection<Product> products, ICollection<Listing> listings, HashSet<string> canonicalManufacturerNames)
+        {
+            var aliases = _aliasGenerator.Generate(products, listings);
+            var listingBlockGrouper = new ManufacturerListingsBlockGrouper(canonicalManufacturerNames, aliases);
+            var listingBlocks = listingBlockGrouper.Match(listings);
+
+            foreach (var unmatched in listingBlocks.Item2) { _logWarning(String.Format("Failed To match {0}", unmatched.Title)); }
+
+            return listingBlocks.Item1;
+        }
+
+        private IEnumerable<ProductMatch> MatchProductsToListings(IEnumerable<ManufacturerNameListingsBlock> listingBlocks, IEnumerable<ManufacturerNameProductsBlock> productBlocks)
+        {
+            // TODO: Move to wire-up
+            var matcher = new ProductModelMatcher();
+
+            var productBlocksByManufacturerName = productBlocks.ToDictionary(x => x.ManufacturerName);
+            foreach (var listingBlock in listingBlocks)
             {
-                var p = productByManu[name].Where(x => x.Model != null && x.Family != null);
-                var l = listingByManu[name];
-
-                var IdxByWord = new Dictionary<string, int>();
-                var weights = new List<double>();
-                var idx = 0;
-
-                var modelFreq = new WordFrequencyPerCollection().Count(p, x => x.Model);
-                foreach (var model in modelFreq)
+                if (!productBlocksByManufacturerName.ContainsKey(listingBlock.ManufacturerName))
                 {
-                    IdxByWord.Add(model.Key, idx);
-                    weights.Add(model.Value);
-                    idx++;
+                    foreach (var unmatched in listingBlock.Listings) { _logWarning(String.Format("Failed To match {0}", unmatched.Title)); }
+                    continue; // No products for manufacturer
                 }
 
-                var familyFreq = new WordFrequencyPerCollection().Count(p, x => x.Family);
-                foreach (var model in familyFreq)
-                {
-                    IdxByWord.Add(model.Key, idx);
-                    weights.Add(model.Value);
-                    idx++;
-                }
+                var productBlock = productBlocksByManufacturerName[listingBlock.ManufacturerName];
+                var matches = matcher.FindProductMatchs(listingBlock, productBlock);
 
-                var productVector = new List<List<bool>>();
-                foreach (var product in p)
+                foreach (var unmatched in matches.Item2) { _logWarning(String.Format("Failed To match {0}", unmatched.Title)); }
+
+                foreach(var match in matches.Item1)
                 {
-                    productVector.Add(new List<bool>());
+                    yield return match;
                 }
             }
-
-            //var manuMatches = new ManufacturerMatcher().Match(listings, canonicalManufacturerNames).ToList();
-
-            //var bad = manuMatches.Where(x => x.ManufacturerName == null);
-            //var blah = new ManufacturerMatcher().Match(bad.Select(x => x.Listing), canonicalManufacturerNames).ToList();
-
-            throw new NotImplementedException();
         }
     }
 }
