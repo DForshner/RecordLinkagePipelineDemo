@@ -1,15 +1,25 @@
 ﻿using System.Collections.Generic;
 using Pipeline.Shared;
-using Pipeline.Infrastructure;
-using System;
+using System.Linq;
 
 namespace Pipeline.Matching
 {
     public class ManufacturerProductsBlockGrouper
     {
-        public IEnumerable<ManufacturerNameProductsBlock> Match(IEnumerable<Product> toMatch, IEnumerable<string> canonicalManufacturerNames)
+        public IEnumerable<ManufacturerNameProductsBlock> Match(IEnumerable<Product> productsToMatch, IEnumerable<string> canonicalManufacturerNames)
         {
-            throw new NotImplementedException();
+            var matched = new Dictionary<string, List<Product>>();
+
+            foreach(var toMatch in productsToMatch)
+            {
+                if (!matched.ContainsKey(toMatch.Manufacturer))
+                {
+                    matched.Add(toMatch.Manufacturer, new List<Product>());
+                }
+                matched[toMatch.Manufacturer].Add(toMatch);
+            }
+
+            return matched.Select(x => new ManufacturerNameProductsBlock { ManufacturerName = x.Key, Products = x.Value });
         }
     }
 }

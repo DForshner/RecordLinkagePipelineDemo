@@ -59,13 +59,18 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Analysis\TokenProbablityPerListingCalculatorTests.cs" />
     <Compile Include="Analysis\SimilarityAliasGeneratorTests.cs" />
+    <Compile Include="Extraction\MungerTests.cs" />
+    <Compile Include="Infrastructure\StringExtensionsTests.cs" />
     <Compile Include="Infrastructure\IListDecimalExtensionsTests.cs" />
-    <Compile Include="Matching\ManufacturerMatcherTests.cs" />
+    <Compile Include="Matching\ProductModelMatcherTests.cs" />
+    <Compile Include="Matching\ManufacturerListingsBlockGrouperTests.cs" />
     <Compile Include="Analysis\WordFrequencyPerCollectionTests.cs" />
     <Compile Include="Extraction\ListingParserTests.cs" />
     <Compile Include="Extraction\ProductParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Pruning\TermUniquenessDistributionPrunerTests.cs" />
     <Compile Include="Pruning\ProductMatchCostOutlierPrunerTests.cs" />
   </ItemGroup>
   <ItemGroup>
