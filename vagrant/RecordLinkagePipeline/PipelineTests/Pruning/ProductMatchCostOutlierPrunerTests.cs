@@ -14,7 +14,7 @@ namespace Pipeline.UnitTests.Pruning
             var ratesBySrc = new[]
             {
                 new ExchangeRate { SourceCurrencyCode = "CAD", DestinationCurrencyCode = "CAD", Rate = 1.0M },
-            }.ToDictionary(x => x.SourceCurrencyCode);
+            };
             var matches = new[]
             {
                 new ProductMatch(new Product(), new []
@@ -39,7 +39,7 @@ namespace Pipeline.UnitTests.Pruning
                 new ExchangeRate { SourceCurrencyCode = "CAD", DestinationCurrencyCode = "CAD", Rate = 1.0M },
                 new ExchangeRate { SourceCurrencyCode = "USD", DestinationCurrencyCode = "CAD", Rate = 2.0M },
                 new ExchangeRate { SourceCurrencyCode = "EUR", DestinationCurrencyCode = "CAD", Rate = 4.0M }
-            }.ToDictionary(x => x.SourceCurrencyCode);
+            };
             var matches = new[]
             {
                 new ProductMatch(new Product(), new []

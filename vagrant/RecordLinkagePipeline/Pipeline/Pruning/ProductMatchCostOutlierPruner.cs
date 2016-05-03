@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Pipeline.Shared;
 using Pipeline.Infrastructure;
-using System;
+using Pipeline.Shared;
 
 namespace Pipeline.Pruning
 {
@@ -16,9 +15,9 @@ namespace Pipeline.Pruning
         private const decimal OUTLIER_DEVIATIONS = 1.25M;
         private IDictionary<string, ExchangeRate> _ratesBySource;
 
-        public ProductMatchCostOutlierPruner(IDictionary<string, ExchangeRate> ratesBySource)
+        public ProductMatchCostOutlierPruner(IEnumerable<ExchangeRate> rates)
         {
-            _ratesBySource = ratesBySource;
+            _ratesBySource = rates.ToDictionary(x => x.SourceCurrencyCode);
         }
 
         public IEnumerable<ProductMatch> Prune(IEnumerable<ProductMatch> matches)
