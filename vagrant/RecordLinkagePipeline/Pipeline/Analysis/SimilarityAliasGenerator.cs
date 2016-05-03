@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Pipeline.Shared;
+using Pipeline.Infrastructure;
 
 namespace Pipeline.Analysis
 {
@@ -35,46 +36,6 @@ namespace Pipeline.Analysis
     /// </summary>
     public static class NGramBuilder
     {
-        /// <summary>
-        /// Generates character n-grams
-        /// </summary>
-        private static IEnumerable<string> CreateBiTriQuadCharacterNGrams(string str)
-        {
-            for (var i = 0; i < str.Length - 1; i++)
-            {
-                yield return new string(new char[] { str[i], str[i + 1] });
-            }
-
-            for (var i = 0; i < str.Length - 2; i++)
-            {
-                yield return new string(new char[] { str[i], str[i + 1], str[i + 2] });
-            }
-
-            for (var i = 0; i < str.Length - 3; i++)
-            {
-                yield return new string(new char[] { str[i], str[i + 1], str[i + 2], str[i + 3] });
-            }
-        }
-
-        /// <summary>
-        /// Generates word/token shingles
-        /// </summary>
-        private static IEnumerable<string> CreateUniBiTokenShingles(string str)
-        {
-            var tokens = str.Split(null); // null splits based on Unicode Char.IsWhiteSpace
-
-            for (var i = 0; i < tokens.Length - 1; i++)
-            {
-                yield return tokens[i];
-                yield return tokens[i] + tokens[i + 1];
-            }
-
-            if (tokens.Length > 0)
-            {
-                yield return tokens[tokens.Length - 1];
-            }
-        }
-
         public static IDictionary<string, List<string>> GenerateModelNameShingles(HashSet<string> commonTokens, ICollection<Product> products)
         {
             var modelShinglesByModelName = new ConcurrentDictionary<string, List<string>>();
@@ -82,7 +43,7 @@ namespace Pipeline.Analysis
                 .AsParallel()
                 .ForAll(product =>
                 {
-                    var modelShingles = CreateUniBiTokenShingles(product.Model)
+                    var modelShingles = product.Model.CreateUniBiTokenShingles()
                         // Throw away products with a model that is too common.  Gets rid of "zoom" model.
                         .Where(x => !commonTokens.Contains(x))
                         .ToList();
@@ -100,7 +61,7 @@ namespace Pipeline.Analysis
             var manuNameNGramsByCanonicalManuName = new ConcurrentDictionary<string, List<string>>();
             products
                 .AsParallel()
-                .ForAll(product => manuNameNGramsByCanonicalManuName.GetOrAdd(product.Manufacturer, x => CreateBiTriQuadCharacterNGrams(x).ToList()));
+                .ForAll(product => manuNameNGramsByCanonicalManuName.GetOrAdd(product.Manufacturer, x => x.CreateBiTriQuadCharacterNGrams().ToList()));
             return manuNameNGramsByCanonicalManuName;
         }
     }
@@ -112,26 +73,6 @@ namespace Pipeline.Analysis
         /// </summary>
         const float COMMON_WORD_PERCENTILE = 0.90F;
 
-        public static Dictionary<string, float> GenerateTokenProbabilitiesPerListing(ICollection<Listing> listings)
-        {
-            var freqByToken = new ConcurrentDictionary<string, int>();
-            var docCount = 0;
-            listings
-                .AsParallel()
-                .ForAll(mungedListing =>
-                {
-                    foreach (var token in mungedListing.Title.Split(null))
-                    {
-                        freqByToken.AddOrUpdate(token, 1, (key, val) => { return val + 1; });
-                    }
-
-                    Interlocked.Increment(ref docCount);
-                });
-
-            // Turn freq into probability per doc
-            return freqByToken.ToDictionary(x => x.Key, x => (float)x.Value / docCount);
-        }
-
         public static HashSet<string> GetCommonTokens(IDictionary<string, float> tokenFrequencies)
         {
             var sortedFreqs = tokenFrequencies.Values.OrderBy(x => x).ToList();
@@ -142,63 +83,15 @@ namespace Pipeline.Analysis
 
     /// <summary>
     /// Finds listings for similar manufacturer names and models to generate a list of aliases for manufacturers
-    /// Earlier version: https://github.com/DForshner/CSharpExperiments/blob/master/AliasGenerationBySimilarManufacturerAndModel.cs
+    /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/AliasGenerationBySimilarManufacturerAndModel.cs
     /// </summary>
     public class SimilarityAliasGenerator : IManufacturerNameAliasGenerator
     {
-        /// <summary>
-        /// Words with scores above this percentile are considered good alias candidates.
-        /// </summary>
-        const float POSSIBLE_ALIAS_PERCENTILE = 0.50F;
-
-        private static float CompareListingTextToProductModel(IDictionary<string, float> tokenProbablities, IDictionary<string, List<string>> modelShinglesByModelName, string listingText, string productModel)
-        {
-            List<string> modelShingles;
-            if (!modelShinglesByModelName.TryGetValue(productModel, out modelShingles))
-            {
-                return 0f;
-            }
-
-            var textTokens = new HashSet<string>(listingText.Split(null)); // null splits based on Unicode Char.IsWhiteSpace
-            var modelScore = 0f;
-            foreach (var nGram in modelShingles)
-            {
-                if (textTokens.Contains(nGram))
-                {
-                    // Use the token's inverse probability for a score for now
-                    // The more unlikely the token is the less likely this is an accidental match.
-                    modelScore += tokenProbablities.ContainsKey(nGram) ? 1 / tokenProbablities[nGram] : 0;
-                }
-            }
-
-            return modelScore;
-        }
-
-        /// <summary>
-        /// </summary>
-        private static int CompareManufacturerNameSimilarity(IDictionary<string, List<string>> manuNameNGramsByCanonicalManuName, string listingManuName, string productManuName)
-        {
-            List<string> manuNameNGrams;
-            if (!manuNameNGramsByCanonicalManuName.TryGetValue(productManuName, out manuNameNGrams))
-            {
-                return 0;
-            }
-
-            var nameHit = 0;
-            foreach (var nGram in manuNameNGrams)
-            {
-                if (listingManuName.Contains(nGram))
-                {
-                    nameHit++;
-                }
-            }
-
-            return (100 * nameHit) / manuNameNGrams.Count;
-        }
-
         public IEnumerable<ManufacturerNameAlias> Generate(ICollection<Product> products, ICollection<Listing> listings)
         {
-            var tokenProbablities = Task.Run(() => TokenStatistics.GenerateTokenProbabilitiesPerListing(listings));
+            // TODO: Used elsewhere? inject?
+            var tokenProbablities = Task.Run(() => TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings));
+
             var commonTokens = tokenProbablities
                 .ContinueWith(x => TokenStatistics.GetCommonTokens(x.Result));
 
@@ -261,6 +154,56 @@ namespace Pipeline.Analysis
             return possibleAliasesByCanonical
                 .Where(x => x.Value > percentileCutoff)
                 .Select(x => new ManufacturerNameAlias { Canonical = x.Key.Canonical, Alias = x.Key.Alias });
+        }
+
+        /// <summary>
+        /// Words with scores above this percentile are considered good alias candidates.
+        /// </summary>
+        const float POSSIBLE_ALIAS_PERCENTILE = 0.50F;
+
+        private static float CompareListingTextToProductModel(IDictionary<string, float> tokenProbablities, IDictionary<string, List<string>> modelShinglesByModelName, string listingText, string productModel)
+        {
+            List<string> modelShingles;
+            if (!modelShinglesByModelName.TryGetValue(productModel, out modelShingles))
+            {
+                return 0f;
+            }
+
+            var textTokens = new HashSet<string>(listingText.Split(null)); // null splits based on Unicode Char.IsWhiteSpace
+            var modelScore = 0f;
+            foreach (var nGram in modelShingles)
+            {
+                if (textTokens.Contains(nGram))
+                {
+                    // Use the token's inverse probability for a score for now
+                    // The more unlikely the token is the less likely this is an accidental match.
+                    modelScore += tokenProbablities.ContainsKey(nGram) ? 1 / tokenProbablities[nGram] : 0;
+                }
+            }
+
+            return modelScore;
+        }
+
+        /// <summary>
+        /// </summary>
+        private static int CompareManufacturerNameSimilarity(IDictionary<string, List<string>> manuNameNGramsByCanonicalManuName, string listingManuName, string productManuName)
+        {
+            List<string> manuNameNGrams;
+            if (!manuNameNGramsByCanonicalManuName.TryGetValue(productManuName, out manuNameNGrams))
+            {
+                return 0;
+            }
+
+            var nameHit = 0;
+            foreach (var nGram in manuNameNGrams)
+            {
+                if (listingManuName.Contains(nGram))
+                {
+                    nameHit++;
+                }
+            }
+
+            return (100 * nameHit) / manuNameNGrams.Count;
         }
     }
 }
