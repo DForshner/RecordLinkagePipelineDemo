@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pipeline;
 using Pipeline.Extraction;
 
-namespace Pipeline.UnitTests
+namespace Pipeline.UnitTests.Extraction
 {
     [TestClass]
     public class ListingParserTests
