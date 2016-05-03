@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Linq;
 using Pipeline.Shared;
 
+// TODO: Move to data access layer
+
 namespace Pipeline.Extraction
 {
     static class ListingParser

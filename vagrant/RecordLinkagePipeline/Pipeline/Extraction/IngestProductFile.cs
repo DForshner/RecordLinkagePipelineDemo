@@ -3,6 +3,8 @@ using System.Globalization;
 using System.IO;
 using Pipeline.Shared;
 
+// TODO: Move to data access layer
+
 namespace Pipeline.Extraction
 {
     public class IngestProductFile
