@@ -19,8 +19,9 @@ namespace Pipeline.UnitTests.Analysis
             {
                 new Listing { Manufacturer = "acme corp", Title = "camera zoom model5" }
             };
+            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
 
-            var result = new SimilarityAliasGenerator().Generate(products, listings).Single();
+            var result = new SimilarityAliasGenerator().Generate(products, listings, termProbablities).Single();
 
             Assert.AreEqual("acme", result.Canonical);
             Assert.AreEqual("acme corp", result.Alias);
@@ -39,8 +40,9 @@ namespace Pipeline.UnitTests.Analysis
                 new Listing { Manufacturer = "acme inc", Title = "camera zoom dxc 5" },
                 new Listing { Manufacturer = "acme ltd", Title = "camera zoom model3" }
             };
+            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
 
-            var result = new SimilarityAliasGenerator().Generate(products, listings).Single();
+            var result = new SimilarityAliasGenerator().Generate(products, listings, termProbablities).Single();
 
             Assert.AreEqual("acme", result.Canonical);
             Assert.AreEqual("acme corp", result.Alias);
@@ -59,8 +61,9 @@ namespace Pipeline.UnitTests.Analysis
                 new Listing { Manufacturer = "acme inc", Title = "camera zoom 20x zoom" },
                 new Listing { Manufacturer = "acme ltd", Title = "camera zoom" }
             };
+            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
 
-            var results = new SimilarityAliasGenerator().Generate(products, listings);
+            var results = new SimilarityAliasGenerator().Generate(products, listings, termProbablities);
 
             Assert.IsFalse(results.Any());
         }
