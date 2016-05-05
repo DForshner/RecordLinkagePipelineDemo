@@ -42,7 +42,7 @@ namespace Pipeline.Infrastructure
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<string> CreateUniBiTokenShingles(this string str)
         {
-            var tokens = str.Split(null); // null splits based on Unicode Char.IsWhiteSpace
+            var tokens = str.TokenizeOnWhiteSpace();
 
             for (var i = 0; i < tokens.Length - 1; i++)
             {
@@ -53,6 +53,24 @@ namespace Pipeline.Infrastructure
             if (tokens.Length > 0)
             {
                 yield return tokens[tokens.Length - 1];
+            }
+        }
+
+        /// <summary>
+        /// Generates word/token shingles
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<string> CreateBiTriTokenShingles(this string str)
+        {
+            var tokens = str.TokenizeOnWhiteSpace();
+
+            for (var i = 0; i < tokens.Length - 1; i++)
+            {
+                yield return tokens[i] + tokens[i + 1];
+            }
+            for (var i = 0; i < tokens.Length - 2; i++)
+            {
+                yield return tokens[i] + tokens[i + 1] + tokens[i + 2];
             }
         }
     }

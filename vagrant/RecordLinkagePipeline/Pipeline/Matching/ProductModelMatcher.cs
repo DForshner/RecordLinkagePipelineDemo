@@ -22,37 +22,43 @@ namespace Pipeline.Matching
 
             foreach (var listing in listingBlock.Listings)
             {
-                var listingUnigrams = listing.Title.TokenizeOnWhiteSpace();
+                var listingShingles = listing.Title.CreateUniBiTokenShingles().ToList();
+
                 var bestScore = 0F;
                 Product bestMatch = null;
-
-                // TODO: Do n-gram matching on multi word model number so we don't throw
-                // away token order information.
-
-                // TODO: Normalize on model name length or longer model names get weighted more?
-
                 foreach (var product in productBlock.Products)
                 {
-                    var productUnigrams = new HashSet<string>(product.Model.TokenizeOnWhiteSpace()); // TODO memoize
+                    var productTokens = product.Model.TokenizeOnWhiteSpace();
+                    var productTokensToCheck = (productTokens.Length == 1) ? productTokens : productTokens.CreateBiTriTokenShingles();
                     var score = 0F;
 
-                    // 1) Try match on unigram tokens
-                    foreach(var token in listingUnigrams)
+                    // TODO: Score using probability of term occurring in listings
+
+                    if (productTokens.Length == 1)
                     {
-                        if (!productUnigrams.Contains(token))
+                        foreach(var token in listingShingles)
                         {
-                            score = 0;
-                            break;
+                            if (productTokens.First() == token)
+                            {
+                                score += 1;
+                            }
                         }
-
-                        score += probablityPerToken[token];
                     }
-
-                    // 2) Try match on bigrams
+                    else
+                    {
+                        var productShingles = productTokens.CreateBiTriTokenShingles();
+                        foreach(var token in listingShingles)
+                        {
+                            if (productShingles.Contains(token))
+                            {
+                                score += 1;
+                            }
+                        }
+                    }
 
                     if (score > bestScore)
                     {
-                        bestScore = score / listingUnigrams.Length; // Normalize by # terms in model name so longer models aren't weighted extra
+                        bestScore = score / productTokens.Length; // Normalize by # terms in model name so longer model names aren't weighted extra
                         bestMatch = product;
                     }
                 }

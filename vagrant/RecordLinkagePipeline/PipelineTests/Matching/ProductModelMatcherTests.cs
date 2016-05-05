@@ -80,7 +80,7 @@ namespace Pipeline.UnitTests.Matching
         [TestMethod]
         public void WhenAllModelHasNumberThenLetters_ExpectAllWordsOrderMattersInMatch()
         {
-            var matchingListingTitle = FieldMunger.Munge("Canon EOS 60D Digital SLR Camera with EF-S 18-135mm IS USM Lens & 70-300mm IS USM Lens + 16GB Card + Battery + 2 UV/FLD/CPL Filter Sets + Tripod + Lens Case + Accessory Kit");
+            var matchingListingTitle = FieldMunger.Munge("CANON PowerShot SX130 IS - silver");
             var listingBlock = new ManufacturerNameListingsBlock
             {
                 Listings = new[]
@@ -89,16 +89,18 @@ namespace Pipeline.UnitTests.Matching
                     new Listing { Title = matchingListingTitle },
 
                     // not a match
-                    new Listing { Title = FieldMunger.Munge("Canon SX120 IS Digital Camera +4GB +Case Bundle (Powershot SX120 IS Black, 10MP 10xOptical Zoom 3 LCD)") },
+                    new Listing { Title = FieldMunger.Munge("Canon EOS 60D Digital SLR Camera with EF-S 18-135mm IS USM Lens & 70-300mm IS USM Lens + 16GB Card + Battery + 2 UV/FLD/CPL Filter Sets + Tripod + Lens Case + Accessory Kit") },
                     new Listing { Title = FieldMunger.Munge("Canon EOS 60D Digital SLR Camera with EF-S 18-135mm IS USM Lens & 70-300mm IS USM Lens + 16GB Card + Battery + 2 UV/FLD/CPL Filter Sets + Tripod + Lens Case + Accessory Kit") },
                     new Listing { Title = FieldMunger.Munge("EOS 550D + 18-55 IS + Lowepro (Kit 18-55 mm IS)") },
                 }
             };
+            var matchingProductModel = FieldMunger.Munge("SX130 IS");
             var productBlock = new ManufacturerNameProductsBlock
             {
                 Products = new[]
                 {
                     new Product { Model = FieldMunger.Munge("130 IS") },
+                    new Product { Model = matchingProductModel }
                 }
             };
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
@@ -106,6 +108,7 @@ namespace Pipeline.UnitTests.Matching
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
 
             Assert.AreEqual(1, results.Listings.Count);
+            Assert.AreEqual(matchingListingTitle, results.Listings.Single().Title);
             Assert.AreEqual(matchingListingTitle, results.Listings.Single().Title);
         }
 
