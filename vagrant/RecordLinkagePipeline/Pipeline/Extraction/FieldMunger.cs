@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using Pipeline.Shared;
 
 namespace Pipeline.Extraction
 {
-    internal static class Munger
+    internal static class FieldMunger
     {
         /// <summary>
         /// Remove punctuation, multiple spaces in a row, line endings, and lowercase everything
@@ -29,6 +27,13 @@ namespace Pipeline.Extraction
                     lastCharWasSpace = true;
                 }
             }
+
+            // Remove tailing whitespace char(s)
+            while (result.Any() && Char.IsWhiteSpace(result.Last()))
+            {
+                result.RemoveAt(result.Count - 1);
+            }
+
             return new String(result.ToArray());
         }
     }
