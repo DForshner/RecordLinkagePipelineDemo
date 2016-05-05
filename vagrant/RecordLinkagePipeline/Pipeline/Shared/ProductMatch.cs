@@ -16,5 +16,12 @@ namespace Pipeline.Shared
             this.Product = product;
             this.Listings = listings;
         }
+
+        public override string ToString()
+        {
+            return "{{\n"
+                + @"""product_name"": { " + Product.ToString() + " }\n"
+                + "}}";
+        }
     }
 }

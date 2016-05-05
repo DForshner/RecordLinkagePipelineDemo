@@ -17,8 +17,7 @@ namespace Pipeline.Analysis
         {
             var freqByToken = new ConcurrentDictionary<string, int>();
             var docCount = 0;
-            listings
-                .AsParallel()
+            listings.AsParallel()
                 .ForAll(x =>
                 {
                     foreach (var token in x.Title.TokenizeOnWhiteSpace())

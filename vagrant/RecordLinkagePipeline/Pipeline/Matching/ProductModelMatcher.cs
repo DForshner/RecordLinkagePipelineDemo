@@ -7,9 +7,13 @@ using Pipeline.Shared;
 
 namespace Pipeline.Matching
 {
+    /// <summary>
+    /// Finds the best matching product for each listing.
+    /// </summary>
     public class ProductModelMatcher
     {
-        public Tuple<IEnumerable<ProductMatch>, IEnumerable<Listing>> FindProductMatchs(ManufacturerNameListingsBlock listingBlock, ManufacturerNameProductsBlock productBlock)
+        public Tuple<IEnumerable<ProductMatch>, IEnumerable<Listing>> FindProductMatchs(
+            ManufacturerNameListingsBlock listingBlock, ManufacturerNameProductsBlock productBlock, IDictionary<string, float> probablityPerToken)
         {
             Debug.Assert(listingBlock.ManufacturerName == productBlock.ManufacturerName, "Expected same manufacturer name");
 
@@ -18,26 +22,37 @@ namespace Pipeline.Matching
 
             foreach (var listing in listingBlock.Listings)
             {
-                var tokens = listing.Title.TokenizeOnWhiteSpace();
-                var bestScore = 0;
+                var listingUnigrams = listing.Title.TokenizeOnWhiteSpace();
+                var bestScore = 0F;
                 Product bestMatch = null;
+
+                // TODO: Do n-gram matching on multi word model number so we don't throw
+                // away token order information.
+
+                // TODO: Normalize on model name length or longer model names get weighted more?
 
                 foreach (var product in productBlock.Products)
                 {
-                    var modelTokens = new HashSet<string>(product.Model.TokenizeOnWhiteSpace()); // TODO memorize
+                    var productUnigrams = new HashSet<string>(product.Model.TokenizeOnWhiteSpace()); // TODO memoize
+                    var score = 0F;
 
-                    var score = 0;
-                    foreach(var token in tokens)
+                    // 1) Try match on unigram tokens
+                    foreach(var token in listingUnigrams)
                     {
-                        if (modelTokens.Contains(token))
+                        if (!productUnigrams.Contains(token))
                         {
-                            score++;
+                            score = 0;
+                            break;
                         }
+
+                        score += probablityPerToken[token];
                     }
+
+                    // 2) Try match on bigrams
 
                     if (score > bestScore)
                     {
-                        bestScore = score;
+                        bestScore = score / listingUnigrams.Length; // Normalize by # terms in model name so longer models aren't weighted extra
                         bestMatch = product;
                     }
                 }

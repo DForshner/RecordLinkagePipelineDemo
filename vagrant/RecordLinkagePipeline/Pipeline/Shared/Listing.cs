@@ -4,12 +4,24 @@ namespace Pipeline.Shared
 {
     public class Listing
     {
-        public String Title { get; set; }
+        public string Manufacturer { get; set; }
 
-        public String Manufacturer { get; set; }
+        public string Title { get; set; }
 
-        public String CurrencyCode { get; set; }
+        public string CurrencyCode { get; set; }
 
         public Decimal Price { get; set; }
+
+        public string Original { get; set; }
+
+        public override string ToString()
+        {
+            return "{"
+                + "Manufacturer: " + Manufacturer + ","
+                + "Title: " + Title + ","
+                + "CurrencyCode: " + CurrencyCode + ","
+                + "Price: " + Price.ToString() + ","
+                + "}";
+        }
     }
 }

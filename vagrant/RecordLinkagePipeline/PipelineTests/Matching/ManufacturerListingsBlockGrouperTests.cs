@@ -35,6 +35,21 @@ namespace Pipeline.UnitTests.Matching
             Assert.AreEqual("Real", result.Single().ManufacturerName);
         }
 
+        /// <summary>
+        /// Bug found while testing
+        /// </summary>
+        [TestMethod]
+        public void WhenCanonicalNameHasMultipleWords_ExpectMatch()
+        {
+            var listings = new[]
+            {
+                new Listing { Manufacturer = "konica minolta" }
+            };
+            var canonical = new[] { "konica minolta" };
+            var result = GetSut(canonical).Match(listings).Item1.Single();
+            Assert.IsNotNull(result);
+        }
+
         private ManufacturerListingsBlockGrouper GetSut(IEnumerable<string> canonical = null, IEnumerable<ManufacturerNameAlias> aliases = null)
         {
             canonical = canonical ?? Enumerable.Empty<string>();

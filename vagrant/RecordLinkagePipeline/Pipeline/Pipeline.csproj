@@ -39,6 +39,9 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -53,17 +56,15 @@
     <Compile Include="Analysis\SimilarityAliasGenerator.cs" />
     <Compile Include="Analysis\DeterministicAliasGenerator.cs" />
     <Compile Include="Analysis\IManufacturerNameAliasGenerator.cs" />
-    <Compile Include="Extraction\IngestListingFile.cs" />
-    <Compile Include="Extraction\IngestProductFile.cs" />
-    <Compile Include="Extraction\Munger.cs" />
+    <Compile Include="Extraction\FieldMunger.cs" />
+    <Compile Include="Infrastructure\IListTExtensions.cs" />
     <Compile Include="Infrastructure\IListDoubleExtensions.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
     <Compile Include="Infrastructure\IListDecimalExtensions.cs" />
     <Compile Include="Matching\ManufacturerProductsBlockGrouper.cs" />
-    <Compile Include="Pruning\TermUniquenessDistributionPruner.cs" />
-    <Compile Include="Pruning\ProductMatchCostOutlierPruner.cs" />
-    <Compile Include="Pruning\DeterministicAccessoryPruner.cs" />
-    <Compile Include="Pruning\IListingPruner.cs" />
+    <Compile Include="Classification\TermUniquenessDistributionClassifier.cs" />
+    <Compile Include="Classification\ProductPriceOutlierClassifer.cs" />
+    <Compile Include="Classification\DeterministicClassifier.cs" />
     <Compile Include="Shared\ExchangeRate.cs" />
     <Compile Include="Shared\ManufacturerNameProductsBlock.cs" />
     <Compile Include="Shared\ProductMatch.cs" />
@@ -76,10 +77,12 @@
     <Compile Include="Extraction\ListingParser.cs" />
     <Compile Include="Extraction\ProductParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SimplePipeline.cs" />
+    <Compile Include="ListingsToProductResolutionPipeline.cs" />
     <Compile Include="Analysis\WordFrequencyPerCollection.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

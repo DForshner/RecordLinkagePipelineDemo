@@ -6,15 +6,17 @@ using Pipeline.Analysis;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
-namespace Pipeline.Pruning
+namespace Pipeline.Classification
 {
     /// <summary>
     /// Tries to determine if listing is an accessory based on the distribution of distribution of its term probabilities.
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/ClassifyingDocumentsUsingDistributionOfTermUniqueness.cs
     /// </summary>
-    public class TermUniquenessDistributionPruner : IListingPruner
+    public class TermUniquenessDistributionClassifier
     {
-        private const int NUM_BUCKETS = 30;
+        private const int NUM_BUCKETS = 15;
+        private const double CLASSIFICATION_RATIO = 0.33D;
+
         private static IList<double> _axisValues = GenerateHistogramAxis();
 
         /// <summary>
@@ -57,25 +59,18 @@ namespace Pipeline.Pruning
 
         private static bool IsCamera(IList<int> histogram)
         {
-            if (histogram.Count < 2)
+            var maxFilled = histogram.LastIndexWhere(x => x > 0);
+            if (maxFilled < 2)
             {
+                // Less than two buckets filled in histogram so can't
+                // find the center of mass.
                 return true;
             }
 
-            var medianIdx = 0.5F * (float)histogram.Count;
+            var center = histogram.Select(x => (double)x).ToList().CenterOfMassIndex();
+            var ratio = center / maxFilled;
 
-            var left = 0F;
-            var right = 0F;
-            for (var i = 0; i < histogram.Count; i++)
-            {
-                var dist = Math.Abs(i - medianIdx);
-                if (i < medianIdx)
-                    left += dist * histogram[i];
-                else if (i >= medianIdx)
-                    right += dist * histogram[i];
-            }
-
-            return false;
+            return (ratio < CLASSIFICATION_RATIO);
         }
 
         /// <summary>
@@ -83,14 +78,7 @@ namespace Pipeline.Pruning
         /// </summary>
         private static IList<int> CreateTermProbabilityHistrogram(IList<double> probablitities)
         {
-            var minProbability = probablitities.Min();
-            var numBucketsNeeded = 0;
-            while (numBucketsNeeded < NUM_BUCKETS && _axisValues[numBucketsNeeded] >= minProbability)
-            {
-                numBucketsNeeded += 1;
-            }
-
-            var histogram = Enumerable.Repeat(0, numBucketsNeeded + 1).ToList();
+            var histogram = Enumerable.Repeat(0, NUM_BUCKETS).ToList();
             for (var i = 0; i < probablitities.Count; i++)
             {
                 // Try each bucket until probability fits in range

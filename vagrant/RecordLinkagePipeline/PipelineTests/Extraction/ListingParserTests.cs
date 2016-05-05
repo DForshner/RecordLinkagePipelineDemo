@@ -13,9 +13,9 @@ namespace Pipeline.UnitTests.Extraction
         {
             var src = @"{""title"":""Canon PowerShot ELPH 300 HS (Black)"",""manufacturer"":""Canon Canada"",""currency"":""CAD"",""price"":""259.99""}";
             var result = ListingParser.Parse(src);
-            Assert.AreEqual("Canon PowerShot ELPH 300 HS (Black)".ToUpperInvariant(), result.Title);
-            Assert.AreEqual("Canon Canada".ToUpperInvariant(), result.Manufacturer);
-            Assert.AreEqual("CAD".ToUpperInvariant(), result.CurrencyCode);
+            Assert.AreEqual("Canon PowerShot ELPH 300 HS Black".ToLowerInvariant(), result.Title);
+            Assert.AreEqual("Canon Canada".ToLowerInvariant(), result.Manufacturer);
+            Assert.AreEqual("CAD".ToLowerInvariant(), result.CurrencyCode);
             Assert.AreEqual(259.99M, result.Price);
         }
     }

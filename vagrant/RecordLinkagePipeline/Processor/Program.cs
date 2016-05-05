@@ -1,15 +1,19 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Pipeline;
 using Pipeline.Analysis;
-using Pipeline.Extraction;
-using Pipeline.Pruning;
+using Pipeline.Shared;
+using Processor.IO;
 
 namespace Processor
 {
     public class Program
     {
+        static ConcurrentQueue<string> _linesToLog = new ConcurrentQueue<string>();
+
         static void Main(string[] args)
         {
             // TODO: Mono's PWD is different that .Net's. Find a cleaner way of doing this.
@@ -18,43 +22,42 @@ namespace Processor
                 Directory.SetCurrentDirectory("../../../");
             }
 
-            // TODO: Get file locations from args
-            var products = new IngestProductFile().Ingest("./Resources/products.txt").ToList();
-            var listings = new IngestListingFile().Ingest("./Resources/listings.txt", 1000).ToList();
+            var pipeline = CreatePipeline();
 
-            var pipeline = CreatedWiredUpPipeline();
+            // TODO: Get file locations from args
+
+            // I'm passing these as functions to keep external I/O concerns out of the pipeline module. Could also use interface + constructor injection.
+            Func<IEnumerable<string>> products = () =>  new FileReader().ReadLines("./Resources/products.txt");
+            Func<IEnumerable<string>> listings = () =>  new FileReader().ReadLines("./Resources/listings.txt");
             var matches = pipeline.FindMatches(products, listings);
 
-            foreach(var match in matches)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("------------------------------------------------ {0} {1}", match.Product.Manufacturer, match.Product.Model);
+            System.IO.File.WriteAllLines(@"./log.txt", _linesToLog.Select(x => x));
+            System.IO.File.WriteAllLines(@"./results.txt", ToJSON(matches));
+        }
 
-                Console.ForegroundColor = ConsoleColor.White;
-                foreach(var listing in match.Listings)
+        private static IEnumerable<string> ToJSON(IEnumerable<ProductMatch> matches)
+        {
+            foreach (var match in matches.Where(x => x.Listings.Any()))
+            {
+                yield return match.Product.Original;
+                foreach (var listing in match.Listings)
                 {
-                    Console.WriteLine(listing.Manufacturer);
-                    Console.WriteLine(listing.Title);
+                    yield return "\t" + listing.Original;
                 }
             }
         }
 
         /// <summary>
-        /// Wire up pipeline dependencies (aka. composition root)
+        /// Wire up dependencies/composition root
         /// </summary>
-        private static SimplePipeline CreatedWiredUpPipeline(bool fallbackAliasGenerator = false, bool fallbackAccessoryPruner = false, bool logToFile = false)
+        private static ListingsToProductResolutionPipeline CreatePipeline(bool fallbackAliasGenerator = false, bool fallbackAccessoryPruner = true, bool logToFile = false)
         {
-            var logger = (logToFile)
-                // TODO: Log to file
-                ? (Action<string>)((string x) => { Console.ForegroundColor = ConsoleColor.Red; Console.WriteLine(x); Console.ForegroundColor = ConsoleColor.White; })
-                : (Action<string>)((string x) => { Console.ForegroundColor = ConsoleColor.Red; Console.WriteLine(x); Console.ForegroundColor = ConsoleColor.White; });
+            Action<string> log = x => _linesToLog.Enqueue(x);
 
             IManufacturerNameAliasGenerator aliasGenerator = (fallbackAliasGenerator)
                 ? (IManufacturerNameAliasGenerator)new DeterministicAliasGenerator() : (IManufacturerNameAliasGenerator)new SimilarityAliasGenerator();
-            IListingPruner accessoryPruner = (fallbackAccessoryPruner)
-                ? (IListingPruner)new DeterministicAccessoryPruner() : (IListingPruner)new TermUniquenessDistributionPruner();
 
-            return new SimplePipeline(logger, aliasGenerator, accessoryPruner);
+            return new ListingsToProductResolutionPipeline(log, aliasGenerator);
         }
 
         public static bool IsMono()
