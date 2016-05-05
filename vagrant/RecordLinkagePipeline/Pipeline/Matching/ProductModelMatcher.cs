@@ -22,37 +22,23 @@ namespace Pipeline.Matching
 
             foreach (var listing in listingBlock.Listings)
             {
-                var listingShingles = listing.Title.CreateUniBiTokenShingles().ToList();
+                var listingShingles = listing.Title.CreateUniBiTokenShingles().ToArray();
 
+                // Find the best product match
                 var bestScore = 0F;
                 Product bestMatch = null;
                 foreach (var product in productBlock.Products)
                 {
                     var productTokens = product.Model.TokenizeOnWhiteSpace();
-                    var productTokensToCheck = (productTokens.Length == 1) ? productTokens : productTokens.CreateBiTriTokenShingles();
-                    var score = 0F;
+                    var productTokensToCheck = (productTokens.Length == 1) ? productTokens : productTokens.CreateBiTriTokenShingles().ToArray();
 
                     // TODO: Score using probability of term occurring in listings
-
-                    if (productTokens.Length == 1)
+                    var score = 0F;
+                    foreach(var token in listingShingles)
                     {
-                        foreach(var token in listingShingles)
+                        if (productTokensToCheck.Contains(token))
                         {
-                            if (productTokens.First() == token)
-                            {
-                                score += 1;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var productShingles = productTokens.CreateBiTriTokenShingles();
-                        foreach(var token in listingShingles)
-                        {
-                            if (productShingles.Contains(token))
-                            {
-                                score += 1;
-                            }
+                            score += 1;
                         }
                     }
 
