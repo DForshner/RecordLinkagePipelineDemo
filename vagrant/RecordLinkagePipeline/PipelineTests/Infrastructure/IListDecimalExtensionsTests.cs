@@ -2,10 +2,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pipeline.Infrastructure;
 
-namespace Pipeline.UnitTests
+namespace Pipeline.UnitTests.Infrastructure
 {
     [TestClass]
-    public class IListDecimalExtensionsTests
+    public class IListDecimalExtensionsTests2
     {
         /// <summary>
         /// http://statistics.about.com/od/Descriptive-Statistics/a/How-Do-We-Determine-What-Is-An-Outlier.htm
