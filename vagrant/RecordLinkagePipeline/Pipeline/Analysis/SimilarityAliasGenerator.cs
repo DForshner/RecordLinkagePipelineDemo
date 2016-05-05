@@ -103,8 +103,8 @@ namespace Pipeline.Analysis
                     }
                 });
 
-            var sortedScores = possibleAliasesByCanonical.Select(x => x.Value).OrderBy(x => x).ToList();
-            var percentileCutoff = (sortedScores.Count > 1) ? sortedScores[(int)((float)(sortedScores.Count) * POSSIBLE_ALIAS_PERCENTILE)] : 0;
+            var percentileCutoff = (possibleAliasesByCanonical.Count > 1) ? possibleAliasesByCanonical.Values.ToList().FindPercentile(POSSIBLE_ALIAS_PERCENTILE) : 0F;
+
             return possibleAliasesByCanonical
                 .Where(x => x.Value > percentileCutoff)
                 .Select(x => new ManufacturerNameAlias { Canonical = x.Key.Canonical, Alias = x.Key.Alias });

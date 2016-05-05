@@ -56,6 +56,7 @@
     <Compile Include="Analysis\SimilarityAliasGenerator.cs" />
     <Compile Include="Analysis\DeterministicAliasGenerator.cs" />
     <Compile Include="Extraction\FieldMunger.cs" />
+    <Compile Include="Infrastructure\IListFloatExtensions.cs" />
     <Compile Include="Infrastructure\IListTExtensions.cs" />
     <Compile Include="Infrastructure\IListDoubleExtensions.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
