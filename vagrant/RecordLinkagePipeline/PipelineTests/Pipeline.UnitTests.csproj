@@ -72,7 +72,7 @@
     <Compile Include="Extraction\ListingParserTests.cs" />
     <Compile Include="Extraction\ProductParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Classification\DeterministicClassifierTests.cs" />
+    <Compile Include="Classification\HeuristicClassifierTests.cs" />
     <Compile Include="Classification\TermUniquenessDistributionClassifierTests.cs" />
     <Compile Include="Classification\ProductPriceOutlierClassiferTests.cs" />
   </ItemGroup>

@@ -91,7 +91,7 @@ namespace Pipeline
             _log(String.Format("Pruning non camera listings"));
 
             var costClassifier = GetCostClassifier();
-            var _accessoryClassifier = new DeterministicClassifier();
+            var _accessoryClassifier = new HeuristicClassifier();
 
             foreach(var match in possibleMatches)
             {

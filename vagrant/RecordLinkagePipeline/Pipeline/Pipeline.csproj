@@ -63,7 +63,7 @@
     <Compile Include="Matching\ManufacturerProductsBlockGrouper.cs" />
     <Compile Include="Classification\TermUniquenessDistributionClassifier.cs" />
     <Compile Include="Classification\ProductPriceOutlierClassifer.cs" />
-    <Compile Include="Classification\DeterministicClassifier.cs" />
+    <Compile Include="Classification\HeuristicClassifier.cs" />
     <Compile Include="Shared\ExchangeRate.cs" />
     <Compile Include="Shared\ManufacturerNameProductsBlock.cs" />
     <Compile Include="Shared\ProductMatch.cs" />

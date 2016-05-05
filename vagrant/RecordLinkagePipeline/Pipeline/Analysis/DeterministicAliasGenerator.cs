@@ -8,11 +8,12 @@ namespace Pipeline.Analysis
     /// </summary>
     public class DeterministicAliasGenerator
     {
-        public IEnumerable<ManufacturerNameAlias> Generate(ICollection<Product> products, ICollection<Listing> listings, IDictionary<string, float> tokenProbablities)
+        public IEnumerable<ManufacturerNameAlias> Generate()
         {
             return new[]
             {
-                new ManufacturerNameAlias { Canonical = "fujifilm", Alias = "fuji" }
+                new ManufacturerNameAlias { Canonical = "fujifilm", Alias = "fuji" },
+                new ManufacturerNameAlias { Canonical = "sigma", Alias = "sigmatek" },
             };
         }
     }

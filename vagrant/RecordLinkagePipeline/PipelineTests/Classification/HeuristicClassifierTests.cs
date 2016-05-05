@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pipeline.Analysis;
 using Pipeline.Classification;
 using Pipeline.Extraction;
 using Pipeline.Shared;
@@ -9,7 +7,7 @@ using Pipeline.Shared;
 namespace Pipeline.UnitTests.Classification
 {
     [TestClass]
-    public class DeterministicClassifierTests
+    public class HeuristicClassifierTests
     {
         [TestMethod]
         public void WhenCamera_ExpectIsCamera()
@@ -56,9 +54,9 @@ namespace Pipeline.UnitTests.Classification
             }
         }
 
-        private static DeterministicClassifier GetSut()
+        private static HeuristicClassifier GetSut()
         {
-            return new DeterministicClassifier();
+            return new HeuristicClassifier();
         }
     }
 }

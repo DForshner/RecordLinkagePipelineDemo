@@ -8,7 +8,7 @@ namespace Pipeline.Classification
     /// <summary>
     /// Examine each listing and try to classify it as a camera using deterministic rules/heuristics
     /// </summary>
-    public class DeterministicClassifier
+    public class HeuristicClassifier
     {
         private static string[] _wordsAssociatedWithAccessoryListings = new[]
         {
