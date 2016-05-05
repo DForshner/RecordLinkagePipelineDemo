@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Linq;
 using Pipeline.Shared;
 
-// TODO: Move to data access layer
-
 namespace Pipeline.Extraction
 {
     static class ListingParser
@@ -12,25 +10,14 @@ namespace Pipeline.Extraction
         public static Listing Parse(String str)
         {
             Debug.Assert(!String.IsNullOrEmpty(str));
-
-            var fieldsAndValues = str
-                .Remove(str.Length - 1, 1) // Remove end bracket }
-                .Remove(0, 1) // Remove open bracket {
-                .Split(',', ':')
-                .Select(x => x
-                    .ToUpperInvariant()
-                    .Trim(Environment.NewLine.ToCharArray())
-                    .Remove(x.Length - 1, 1) // Remove end quote
-                    .Remove(0, 1) // Remove start quote
-                )
-                .ToList();
-
+            var jsonObj = Newtonsoft.Json.Linq.JObject.Parse(str);
             return new Listing
             {
-                Title = fieldsAndValues[1],
-                Manufacturer = fieldsAndValues[3],
-                CurrencyCode = fieldsAndValues[5],
-                Price = Decimal.Parse(fieldsAndValues[7])
+                Title = FieldMunger.Munge((string)jsonObj["title"]),
+                Manufacturer = FieldMunger.Munge((string)jsonObj["manufacturer"]),
+                Price = Decimal.Parse((string)jsonObj["price"]),
+                CurrencyCode = FieldMunger.Munge((string)jsonObj["currency"]),
+                Original = str
             };
         }
     }

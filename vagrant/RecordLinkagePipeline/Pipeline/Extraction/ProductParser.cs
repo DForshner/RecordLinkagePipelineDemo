@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using Pipeline.Shared;
-
-// TODO: Move to data access layer
 
 namespace Pipeline.Extraction
 {
@@ -12,26 +9,13 @@ namespace Pipeline.Extraction
         public static Product Parse(String str)
         {
             Debug.Assert(!String.IsNullOrEmpty(str));
-
-            var fieldsAndValues = str
-                .Remove(str.Length - 1, 1) // Remove end bracket }
-                .Remove(0, 1) // Remove open bracket {
-                .Split(',', ':')
-                .Select(x => x
-                    .ToUpperInvariant()
-                    .Trim()
-                    .Remove(x.Length - 1, 1) // Remove end quote
-                    .Remove(0, 1) // Remove start quote
-                )
-                .ToList();
-
+            var jsonObj = Newtonsoft.Json.Linq.JObject.Parse(str);
             return new Product
             {
-                Name = fieldsAndValues[1],
-                Manufacturer = fieldsAndValues[3],
-                Model = fieldsAndValues[5],
-                Family = fieldsAndValues[7]
-                //AnnouncedDate = DateTime.Parse(fieldsAndValues[9])
+                Name = FieldMunger.Munge((string)jsonObj["product_name"]),
+                Manufacturer = FieldMunger.Munge((string)jsonObj["manufacturer"]),
+                Model = FieldMunger.Munge((string)jsonObj["model"]),
+                Original = str
             };
         }
     }
