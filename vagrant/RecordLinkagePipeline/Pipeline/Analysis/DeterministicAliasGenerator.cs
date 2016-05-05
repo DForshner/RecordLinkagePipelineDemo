@@ -12,8 +12,7 @@ namespace Pipeline.Analysis
         {
             return new[]
             {
-                new ManufacturerNameAlias { Canonical = "fujifilm", Alias = "fuji" },
-                new ManufacturerNameAlias { Canonical = "sigma", Alias = "sigmatek" },
+                new ManufacturerNameAlias { Canonical = "fujifilm", Alias = "fuji" }
             };
         }
     }
