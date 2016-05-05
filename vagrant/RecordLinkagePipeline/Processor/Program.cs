@@ -53,11 +53,7 @@ namespace Processor
         private static ListingsToProductResolutionPipeline CreatePipeline(bool fallbackAliasGenerator = false, bool fallbackAccessoryPruner = true, bool logToFile = false)
         {
             Action<string> log = x => _linesToLog.Enqueue(x);
-
-            IManufacturerNameAliasGenerator aliasGenerator = (fallbackAliasGenerator)
-                ? (IManufacturerNameAliasGenerator)new DeterministicAliasGenerator() : (IManufacturerNameAliasGenerator)new SimilarityAliasGenerator();
-
-            return new ListingsToProductResolutionPipeline(log, aliasGenerator);
+            return new ListingsToProductResolutionPipeline(log);
         }
 
         public static bool IsMono()

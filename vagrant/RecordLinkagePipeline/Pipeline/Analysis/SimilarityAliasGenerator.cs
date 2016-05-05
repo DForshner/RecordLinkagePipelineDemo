@@ -11,7 +11,7 @@ namespace Pipeline.Analysis
     /// Finds listings for similar manufacturer names and models to generate a list of aliases for manufacturers
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/AliasGenerationBySimilarManufacturerAndModel.cs
     /// </summary>
-    public class SimilarityAliasGenerator : IManufacturerNameAliasGenerator
+    public class SimilarityAliasGenerator
     {
         /// <summary>
         /// Note: needs to be low enough to match "fuji" up with "fujifilm"

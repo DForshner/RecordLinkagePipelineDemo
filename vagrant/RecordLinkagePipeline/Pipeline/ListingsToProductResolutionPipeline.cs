@@ -16,12 +16,10 @@ namespace Pipeline
     public class ListingsToProductResolutionPipeline
     {
         private readonly Action<string> _log;
-        private readonly IManufacturerNameAliasGenerator _aliasGenerator;
 
-        public ListingsToProductResolutionPipeline(Action<string> log, IManufacturerNameAliasGenerator aliasGenerator)
+        public ListingsToProductResolutionPipeline(Action<string> log)
         {
             _log = log;
-            _aliasGenerator = aliasGenerator;
         }
 
         public IEnumerable<ProductMatch> FindMatches(Func<IEnumerable<string>> loadRawProducts, Func<IEnumerable<string>> loadRawListings)
@@ -148,7 +146,7 @@ namespace Pipeline
         {
             _log(String.Format("Blocking listings by manufacturer name"));
 
-            var aliases = _aliasGenerator.Generate(products, listings, tokenProbablities);
+            var aliases = new SimilarityAliasGenerator().Generate(products, listings, tokenProbablities);
             var listingBlockGrouper = new ManufacturerListingsBlockGrouper(canonicalManufacturerNames, aliases);
             var listingBlocks = listingBlockGrouper.Match(listings);
 
