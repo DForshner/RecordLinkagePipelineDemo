@@ -15,6 +15,7 @@ namespace Pipeline.Extraction
                 Name = FieldMunger.Munge((string)jsonObj["product_name"]),
                 Manufacturer = FieldMunger.Munge((string)jsonObj["manufacturer"]),
                 Model = FieldMunger.Munge((string)jsonObj["model"]),
+                Family = jsonObj["family"] != null ? FieldMunger.Munge((string)jsonObj["family"]) : "",
                 Original = str
             };
         }

@@ -17,5 +17,13 @@ namespace Pipeline.UnitTests.Extraction
             Assert.AreEqual("Toshiba".ToLowerInvariant(), result.Manufacturer);
             Assert.AreEqual("PDR M60".ToLowerInvariant(), result.Model);
         }
+
+        [TestMethod]
+        public void WhenFamily_ExpectParses()
+        {
+            var src = @"{""product_name"":""Canon_IXUS_105"",""manufacturer"":""Canon"",""model"":""105"",""family"":""IXUS"",""announced-date"":""2010-02-07T19:00:00.000-05:00""}";
+            var result = ProductParser.Parse(src);
+            Assert.AreEqual("ixus".ToLowerInvariant(), result.Family);
+        }
     }
 }
