@@ -69,7 +69,7 @@ namespace Pipeline.Matching
                 }
             }
 
-            var blocks = matches.Select(x => new ManufacturerNameListingsBlock { ManufacturerName = x.Key, Listings = x.Value });
+            var blocks = matches.Select(x => new ManufacturerNameListingsBlock(x.Key, x.Value));
 
             return Tuple.Create(blocks, unmatched.AsEnumerable());
         }
