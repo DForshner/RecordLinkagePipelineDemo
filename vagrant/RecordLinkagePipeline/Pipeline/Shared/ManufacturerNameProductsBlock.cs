@@ -11,7 +11,7 @@ namespace Pipeline.Shared
         public ManufacturerNameProductsBlock(string manufacturerName, ICollection<Product> products)
         {
             if (String.IsNullOrEmpty(manufacturerName)) { throw new ArgumentNullException("manufacturerName"); }
-            if (products == null) { throw new ArgumentNullException("listings"); }
+            if (products == null) { throw new ArgumentNullException("products"); }
 
             this.ManufacturerName = manufacturerName;
             this.Products = products;
