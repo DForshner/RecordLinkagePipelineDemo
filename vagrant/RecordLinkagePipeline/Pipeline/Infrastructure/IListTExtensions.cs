@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace Pipeline.Infrastructure
 {
@@ -20,6 +18,11 @@ namespace Pipeline.Infrastructure
                     maxIdx = i;
             }
             return maxIdx;
+        }
+
+        public static HashSet<T> ToHashSet<T>(this IList<T> list)
+        {
+            return new HashSet<T>(list);
         }
     }
 }

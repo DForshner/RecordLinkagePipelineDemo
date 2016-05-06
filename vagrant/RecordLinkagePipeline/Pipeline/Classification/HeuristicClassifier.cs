@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
@@ -12,7 +13,7 @@ namespace Pipeline.Classification
     /// </summary>
     public class HeuristicClassifier
     {
-        private static string[] _wordsAssociatedWithAccessoryListings = new[]
+        private static HashSet<string> _wordsAssociatedWithAccessoryListings = new[]
         {
             "bag",
             "body",
@@ -23,9 +24,9 @@ namespace Pipeline.Classification
             "for",
             "für",
             "pour"
-        };
+        }.ToHashSet();
 
-        private static string[] _wordsAssociatedWithCameraListings = new[]
+        private static HashSet<string> _wordsAssociatedWithCameraListings = new[]
         {
             "mp",
             "megapixel",
@@ -42,7 +43,7 @@ namespace Pipeline.Classification
             // Look for phrase "camera with {feature}"
             "with",
             "livré avec"
-        };
+        }.ToHashSet();
 
         public bool ClassifyAsCamera(Listing listing)
         {
