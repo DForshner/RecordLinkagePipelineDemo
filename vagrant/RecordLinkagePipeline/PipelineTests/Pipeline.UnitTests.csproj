@@ -61,6 +61,7 @@
   <ItemGroup>
     <Compile Include="Analysis\TokenProbablityPerListingCalculatorTests.cs" />
     <Compile Include="Analysis\SimilarityAliasGeneratorTests.cs" />
+    <Compile Include="Classification\NaiveBayesCameraClassifierTests.cs" />
     <Compile Include="Extraction\FieldMungerTests.cs" />
     <Compile Include="Infrastructure\IListTExtensionsTests.cs" />
     <Compile Include="Infrastructure\IListDoubleExtensionsTests.cs" />

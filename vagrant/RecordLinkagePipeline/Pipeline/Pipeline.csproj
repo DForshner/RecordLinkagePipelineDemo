@@ -55,7 +55,9 @@
     <Compile Include="Analysis\TokenProbablityPerListingCalculator.cs" />
     <Compile Include="Analysis\SimilarityAliasGenerator.cs" />
     <Compile Include="Analysis\DeterministicAliasGenerator.cs" />
+    <Compile Include="Classification\NaiveBayesCameraClassifier.cs" />
     <Compile Include="Extraction\FieldMunger.cs" />
+    <Compile Include="Infrastructure\FloatExtensions.cs" />
     <Compile Include="Infrastructure\IListFloatExtensions.cs" />
     <Compile Include="Infrastructure\IListTExtensions.cs" />
     <Compile Include="Infrastructure\IListDoubleExtensions.cs" />
