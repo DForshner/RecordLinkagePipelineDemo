@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Pipeline.Infrastructure;
 
 namespace Pipeline.Analysis
 {
@@ -14,7 +15,7 @@ namespace Pipeline.Analysis
                 numDocs += 1;
 
                 var line = selector(doc);
-                var tokens = line.Split(null); // null splits based on Unicode Char.IsWhiteSpace
+                var tokens = line.TokenizeOnWhiteSpace();
 
                 var uniqueWordsPerDoc = new HashSet<string>();
                 foreach (var token in tokens)
