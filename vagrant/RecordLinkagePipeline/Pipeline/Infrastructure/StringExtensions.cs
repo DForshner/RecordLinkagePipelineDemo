@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Pipeline.Infrastructure
@@ -11,6 +12,8 @@ namespace Pipeline.Infrastructure
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string[] TokenizeOnWhiteSpace(this string str)
         {
+            if (String.IsNullOrEmpty(str)) { return new string[0]; }
+
             return str.Split(null); // null splits based on Unicode Char.IsWhiteSpace
         }
 
