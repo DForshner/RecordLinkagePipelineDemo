@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using Pipeline.Shared;
 
 namespace Pipeline.Extraction
@@ -10,6 +9,7 @@ namespace Pipeline.Extraction
         public static Listing Parse(String str)
         {
             Debug.Assert(!String.IsNullOrEmpty(str));
+
             var jsonObj = Newtonsoft.Json.Linq.JObject.Parse(str);
             return new Listing
             {

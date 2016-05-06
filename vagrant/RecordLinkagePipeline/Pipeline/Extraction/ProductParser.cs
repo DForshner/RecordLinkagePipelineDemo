@@ -9,6 +9,7 @@ namespace Pipeline.Extraction
         public static Product Parse(String str)
         {
             Debug.Assert(!String.IsNullOrEmpty(str));
+
             var jsonObj = Newtonsoft.Json.Linq.JObject.Parse(str);
             return new Product
             {
