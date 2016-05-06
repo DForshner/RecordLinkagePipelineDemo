@@ -66,7 +66,6 @@ namespace Pipeline.Classification
             var phraseCameraWithFeatureScore = (withWordIdx > 0 && precededByCameraWord) ? 100 : 0;
 
             // Look for phrase "for {manufacturer name}" and "for {model}"
-            // TODO: Handle other languages. Ex: "für coolpix", "pour lumix"
             // TODO: Check following word is a manufacturer name or product model
             var forWordIdx = titleTokens.LastIndexWhere(x => x == "for");
             var praseAccessoryForCameraScore = (forWordIdx > 0) ? -100 : 0;

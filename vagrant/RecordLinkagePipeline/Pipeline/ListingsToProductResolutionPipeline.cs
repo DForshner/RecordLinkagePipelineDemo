@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Pipeline.Analysis;
@@ -87,82 +86,52 @@ namespace Pipeline
                 .ToList();
         }
 
-        /// <summary>
-        /// Remove accessories (batteries etc.) from product matches
-        /// </summary>
         private IEnumerable<ProductMatch> PruneMatches(IDictionary<string, float> probablityPerToken, IEnumerable<ProductMatch> possibleMatches)
         {
             _log(String.Format("Pruning non camera listings"));
 
-            var costClassifier = GetPriceOutlierClassifier();
-            var accessoryClassifier = new HeuristicClassifier();
+            var costClassifier = GetCostClassifier();
+            var _accessoryClassifier = new HeuristicClassifier();
 
             foreach(var match in possibleMatches)
             {
-                var withoutAccessories = PruneAccessoryListings(probablityPerToken, accessoryClassifier, match);
+                var accessoryScores = match.Listings
+                    .Select(x => _accessoryClassifier.ClassifyAsCamera(probablityPerToken, x))
+                    .Select(x => x ? 50 : 0)
+                    .ToList();
 
-                var withTypicalPrices = PrunePriceOutliers(costClassifier, withoutAccessories);
+                var costOutlierScores = costClassifier.ClassifyAsCamera(match)
+                    .Select(x => x.Item2 ? 50 : 0)
+                    .ToList();
 
-                yield return withTypicalPrices;
+                var listingScores = match.Listings
+                    .Select((x, i) => new { Listing = x, Score = accessoryScores[i] + costOutlierScores[i] })
+                    .ToList();
+
+                listingScores
+                    .Where(x => x.Score < 50)
+                    .ToList()
+                    .ForEach(x => _log(String.Format("Pruned listing: {0}", x.Listing.Title)));
+
+                var cameraListings = listingScores
+                    .Where(x => x.Score >= 50)
+                    .Select(x => x.Listing)
+                    .ToList();
+
+                yield return new ProductMatch(match.Product, cameraListings);
             }
         }
 
-        private ProductMatch PruneAccessoryListings(IDictionary<string, float> probablityPerToken, HeuristicClassifier accessoryClassifier, ProductMatch match)
-        {
-            var accessoryScores =  match.Listings
-                .Select(x => new { Listing = x, IsCamera = accessoryClassifier.ClassifyAsCamera(probablityPerToken, x) })
-                .ToList();
-
-            accessoryScores
-                .Where(x => !x.IsCamera)
-                .ToList()
-                .ForEach(x => _log(String.Format("Pruned accessory: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode)));
-
-            var cameras = accessoryScores
-                .Where(x => x.IsCamera)
-                .Select(x => x.Listing)
-                .ToList();
-
-            return new ProductMatch(match.Product, cameras);
-        }
-
-        private ProductMatch PrunePriceOutliers(ProductPriceOutlierClassifer costClassifier, ProductMatch match)
-        {
-            var withPriceOutlierScore = costClassifier.ClassifyAsCamera(match)
-                .Select(x => new { Listing = x.Item1, IsCamera = x.Item2 })
-                .ToList();
-
-            var accessories = withPriceOutlierScore
-                .Where(x => !x.IsCamera)
-                .ToList();
-
-            foreach(var x in accessories)
-            {
-                _log(String.Format("Pruned price outlier: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
-            }
-
-            // TODO: Remove
-            //if (withPriceOutlierScore.Any(x => x.Listing.Title.Contains("2 7 inch purecolor lcd")))
-                //Debugger.Break();
-
-            var cameras = withPriceOutlierScore
-                .Where(x => x.IsCamera)
-                .Select(x => x.Listing)
-                .ToList();
-
-            return new ProductMatch(match.Product, cameras);
-        }
-
-        private static ProductPriceOutlierClassifer GetPriceOutlierClassifier()
+        private static ProductPriceOutlierClassifer GetCostClassifier()
         {
             // TODO: Get rates from file
             // TODO: Add time ranges rate is valid for
             var rates = new[]
             {
                 new ExchangeRate { SourceCurrencyCode = "cad", DestinationCurrencyCode = "cad", Rate = 1M },
-                new ExchangeRate { SourceCurrencyCode = "usd", DestinationCurrencyCode = "cad", Rate = 1.3M },
-                new ExchangeRate { SourceCurrencyCode = "eur", DestinationCurrencyCode = "cad", Rate = 1.4M },
-                new ExchangeRate { SourceCurrencyCode = "gbp", DestinationCurrencyCode = "cad", Rate = 1.8M }
+                new ExchangeRate { SourceCurrencyCode = "usd", DestinationCurrencyCode = "cad", Rate = 1.29M },
+                new ExchangeRate { SourceCurrencyCode = "eur", DestinationCurrencyCode = "cad", Rate = 1.40M },
+                new ExchangeRate { SourceCurrencyCode = "gbp", DestinationCurrencyCode = "cad", Rate = 1.80M }
             };
             return new ProductPriceOutlierClassifer(rates);
         }
@@ -189,6 +158,7 @@ namespace Pipeline
         private IEnumerable<ProductMatch> MatchProductsToListings(
             IEnumerable<ManufacturerNameListingsBlock> listingBlocks, IEnumerable<ManufacturerNameProductsBlock> productBlocks, IDictionary<string, float> probablityPerToken)
         {
+            // TODO: Move to wire-up
             var matcher = new ProductModelMatcher();
 
             var productBlocksByManufacturerName = productBlocks.ToDictionary(x => x.ManufacturerName);

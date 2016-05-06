@@ -13,8 +13,8 @@ namespace Pipeline.Classification
     /// </summary>
     public class ProductPriceOutlierClassifer
     {
-        private const decimal LOWER_RANGE_MULTIPLIER = 0.5M;
-        private const decimal UPPER_RANGE_MULTIPLIER = 5M;
+        private const decimal LOWER_RANGE_MULTIPLIER = 0.8M;
+        private const decimal UPPER_RANGE_MULTIPLIER = 3M;
         private const int MIN_NUM_LISTINGS = 5;
 
         private IDictionary<string, ExchangeRate> _ratesBySource;
@@ -39,15 +39,28 @@ namespace Pipeline.Classification
             var originalRange = withNormalizedPrices
                 .Select(x => x.NormalizedPrice)
                 .ToList()
-                .InterquartileStrongOutlierRange();
+                .InterquartileWeakOutlierRange();
+
+            // Recalculate the range again after throwing away the outliers
+            var adjustedRange = withNormalizedPrices
+                .Where(x => x.NormalizedPrice >= originalRange.Item1 && x.NormalizedPrice <= originalRange.Item2)
+                .Select(x => x.NormalizedPrice)
+                .ToList()
+                .InterquartileWeakOutlierRange();
 
             // Some of the cameras that come are parts of kits are many times more
             // expensive than the camera alone so we need to raise the upper limit.
-            var min = (originalRange.Item1 > 0 ? originalRange.Item1 : 0) * LOWER_RANGE_MULTIPLIER;
-            var max = originalRange.Item2 * UPPER_RANGE_MULTIPLIER;
+            var min = (adjustedRange.Item1 > 0 ? adjustedRange.Item1 : 0) * LOWER_RANGE_MULTIPLIER;
+            var max = adjustedRange.Item2 * UPPER_RANGE_MULTIPLIER;
 
             var classifiedListings = withNormalizedPrices
                 .Select(x => Tuple.Create(x.Listing, (x.NormalizedPrice >= min && x.NormalizedPrice <= max)));
+
+
+            // TODO
+            //if (classifiedListings.Any(x => x.Item1.Title.Contains("body") && x.Item2))
+                //Debugger.Break();
+
 
             return classifiedListings;
         }
