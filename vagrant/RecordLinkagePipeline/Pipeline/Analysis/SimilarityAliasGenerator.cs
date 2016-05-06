@@ -107,7 +107,7 @@ namespace Pipeline.Analysis
 
             return possibleAliasesByCanonical
                 .Where(x => x.Value > percentileCutoff)
-                .Select(x => new ManufacturerNameAlias { Canonical = x.Key.Canonical, Alias = x.Key.Alias });
+                .Select(x => new ManufacturerNameAlias(x.Key.Canonical, x.Key.Alias));
         }
 
         private static float CompareListingTextToProductModel(IDictionary<string, float> tokenProbablities, IDictionary<string, List<string>> modelShinglesByModelName, string listingText, string productModel)

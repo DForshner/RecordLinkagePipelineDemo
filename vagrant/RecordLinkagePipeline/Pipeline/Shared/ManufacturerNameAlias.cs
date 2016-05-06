@@ -1,4 +1,5 @@
 ﻿
+using System;
 namespace Pipeline.Shared
 {
     /// <summary>
@@ -6,7 +7,16 @@ namespace Pipeline.Shared
     /// </summary>
     public class ManufacturerNameAlias
     {
-        public string Canonical { get; set; }
-        public string Alias { get; set; }
+        public readonly string Canonical;
+        public readonly string Alias;
+
+        public ManufacturerNameAlias(string canonical, string alias)
+        {
+            if (String.IsNullOrEmpty(canonical)) { throw new ArgumentNullException("manufacturerName"); }
+            if (String.IsNullOrEmpty(alias)) { throw new ArgumentNullException("alias"); }
+
+            this.Canonical = canonical;
+            this.Alias = alias;
+        }
     }
 }

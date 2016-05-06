@@ -30,7 +30,7 @@ namespace Pipeline.UnitTests.Matching
                 new Listing { Manufacturer = "Alias" }
             };
             var canonical = new[] { "Real", "Foo", "Bar" };
-            var aliases = new[] { new ManufacturerNameAlias { Canonical = "Real", Alias = "Alias" } };
+            var aliases = new[] { new ManufacturerNameAlias("Real", "Alias") };
             var result = GetSut(canonical, aliases).Match(listings).Item1;
             Assert.AreEqual("Real", result.Single().ManufacturerName);
         }
