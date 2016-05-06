@@ -21,14 +21,7 @@ namespace Pipeline.UnitTests.Matching
                     MakeListing("modela")
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    MakeProduct("modela"),
-                    MakeProduct("modelb")
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("modela"), MakeProduct("modelb") });
             var termProbablities = new Dictionary<string, float>
             {
                 { "modela", 0.1F },
@@ -62,13 +55,7 @@ namespace Pipeline.UnitTests.Matching
                     new Listing { Title = matchingListingTitle }
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    new Product { Model = "pdr m60" },
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("pdr m60") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
@@ -95,14 +82,11 @@ namespace Pipeline.UnitTests.Matching
                 }
             };
             var matchingProductModel = FieldMunger.Munge("SX130 IS");
-            var productBlock = new ManufacturerNameProductsBlock
+            var productBlock = MakeProductBlock(new[]
             {
-                Products = new[]
-                {
-                    new Product { Model = FieldMunger.Munge("130 IS") },
-                    new Product { Model = matchingProductModel }
-                }
-            };
+                new Product { Model = FieldMunger.Munge("130 IS") },
+                new Product { Model = matchingProductModel }
+            });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
@@ -117,6 +101,7 @@ namespace Pipeline.UnitTests.Matching
         {
             var listingBlock = new ManufacturerNameListingsBlock
             {
+                ManufacturerName = "foo",
                 Listings = new[]
                 {
                     MakeListing("PANASONIC Lumix DMC-FX70 - noir + Etui Pixmania Compact 11 X 3.5 X 8 CM NOIR + Carte mémoire SDHC 8 Go"),
@@ -124,13 +109,7 @@ namespace Pipeline.UnitTests.Matching
                     MakeListing("PANASONIC Lumix DMC-FX70 - black")
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    new Product { Model = FieldMunger.Munge("dmc-fx70") },
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("dmc-fx70") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
@@ -155,13 +134,7 @@ namespace Pipeline.UnitTests.Matching
                     MakeListing("HP PhotoSmart 850 4MP Digital Camera w/ 8x Optical Zoom")
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    new Product { Model = FieldMunger.Munge("DSLR-A850") },
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("DSLR-A850") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
@@ -187,13 +160,7 @@ namespace Pipeline.UnitTests.Matching
                     MakeListing("AgfaPhoto OPTIMA 105 Digitalkamera (14 Megapixel, 3-fach opt. Zoom, 3 Zoll Display) schwarz"),
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    MakeProduct("105", "IXUS")
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("105", "IXUS") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
@@ -218,13 +185,7 @@ namespace Pipeline.UnitTests.Matching
                     MakeListing("canon powershot a640 10mp digital camera with 4x optical zoom"),
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    MakeProduct("600", "powershot")
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("600", "powershot") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1;
             Assert.AreEqual(0, results.Count());
@@ -245,15 +206,11 @@ namespace Pipeline.UnitTests.Matching
                     MakeListing("Leica V-LUX 2 14.1 MP Digital Camera with 4.5-108mm Leica Lens + 32GB Accessory Kit")
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    MakeProduct("5", "D-LUX")
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("5", "D-LUX") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
+
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+
             Assert.AreEqual(2, results.Listings.Count());
             Assert.IsTrue(results.Listings.All(x => x.Title.Contains("d lux 5")));
         }
@@ -271,13 +228,7 @@ namespace Pipeline.UnitTests.Matching
                     MakeListing("olympus pen e pl1 red m zuiko digital ed 14 42 mm lens expert shot backpack for digital cameras"),
                 }
             };
-            var productBlock = new ManufacturerNameProductsBlock
-            {
-                Products = new[]
-                {
-                    MakeProduct("pen e pl2")
-                }
-            };
+            var productBlock = MakeProductBlock(new[] { MakeProduct("pen e pl2") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
             var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1;
             Assert.AreEqual(0, results.Count());
@@ -286,6 +237,11 @@ namespace Pipeline.UnitTests.Matching
         private Product MakeProduct(string model = "", string family = "")
         {
             return new Product { Model = FieldMunger.Munge(model), Family = FieldMunger.Munge(family) };
+        }
+
+        private static ManufacturerNameProductsBlock MakeProductBlock(ICollection<Product> products)
+        {
+            return new ManufacturerNameProductsBlock("foo", products);
         }
 
         private Listing MakeListing(string title = "")
