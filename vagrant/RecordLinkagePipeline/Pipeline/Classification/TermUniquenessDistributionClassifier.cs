@@ -6,7 +6,13 @@ using Pipeline.Shared;
 namespace Pipeline.Classification
 {
     /// <summary>
-    /// Tries to determine if listing is an accessory based on the distribution of distribution of its term probabilities.
+    /// Tries to determine if listing is an accessory based on the distribution of its term probabilities.
+    ///
+    /// The idea is to identify listings for accessories for multiple models by looking for listings with 'many" unique terms present.
+    /// Ex: nikon 85mm f 3 5 g vr af s dx ed micro nikkor lens uv filter accessory kit for nikon d300s d300 d40 d60 d5000 d7000 d90 d3000 d3100 digital slr cameras
+    ///
+    /// Assuming a typical camera listing with one model number only has a few unique terms it should be possible to look a histogram of term probabilities and spot the accessory listings.
+    ///
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/ClassifyingDocumentsUsingDistributionOfTermUniqueness.cs
     /// </summary>
     public class TermUniquenessDistributionClassifier
@@ -16,9 +22,6 @@ namespace Pipeline.Classification
 
         private static IList<double> _axisValues = GenerateHistogramAxis();
 
-        /// <summary>
-        /// TODO: ok for virtual dispatch per listing?
-        /// </summary>
         public bool ClassifyAsCamera(IDictionary<string, float> probablityPerToken, Listing listing)
         {
             var probablities = GetProbabilitiesPerToken(probablityPerToken, listing);
