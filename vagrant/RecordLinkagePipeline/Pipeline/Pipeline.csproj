@@ -54,7 +54,6 @@
     <Compile Include="Analysis\CanonicalManufacturerNameGenerator.cs" />
     <Compile Include="Analysis\TokenProbablityPerListingCalculator.cs" />
     <Compile Include="Analysis\SimilarityAliasGenerator.cs" />
-    <Compile Include="Analysis\DeterministicAliasGenerator.cs" />
     <Compile Include="Classification\NaiveBayesCameraClassifier.cs" />
     <Compile Include="Extraction\FieldMunger.cs" />
     <Compile Include="Extraction\ExchangeRateParser.cs" />
