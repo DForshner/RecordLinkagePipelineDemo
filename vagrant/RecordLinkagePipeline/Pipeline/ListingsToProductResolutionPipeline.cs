@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Pipeline.Analysis;
@@ -23,8 +22,10 @@ namespace Pipeline
             _log = log;
         }
 
-        public IEnumerable<ProductMatch> FindMatches(Func<IEnumerable<string>> loadRawProducts, Func<IEnumerable<string>> loadRawListings)
+        public IEnumerable<ProductMatch> FindMatches(Func<IEnumerable<string>> loadRawProducts, Func<IEnumerable<string>> loadRawListings, Func<IEnumerable<string>> loadExchangeRates)
         {
+            var erates = ParseExchangeRates(loadExchangeRates());
+
             var products = Task.Run(() => ParseProducts(loadRawProducts()));
             var canonicalManufacturerNames = products
                 .ContinueWith(x => new CanonicalManufacturerNameGenerator().Generate(x.Result));
@@ -42,9 +43,29 @@ namespace Pipeline
             var possibleMatches = Task.WhenAll(listingBlocks, productBlocks, probablityPerToken)
                 .ContinueWith((x) => MatchProductsToListings(listingBlocks.Result, productBlocks.Result, probablityPerToken.Result).ToList());
 
-            var matches = PruneMatches(probablityPerToken.Result, possibleMatches.Result).ToList();
+            var matches = PruneMatches(probablityPerToken.Result, possibleMatches.Result, erates).ToList();
 
             return matches;
+        }
+
+        public IList<ExchangeRate> ParseExchangeRates(IEnumerable<string> rawStrings)
+        {
+            return rawStrings
+                .AsParallel()
+                .Select(x =>
+                {
+                    try
+                    {
+                        return ExchangeRateParser.Parse(x);
+                    }
+                    catch
+                    {
+                        _log(String.Format("Failed to parse: {0}", x));
+                        return null;
+                    }
+                })
+                .Where(x => x != null) // TODO: Something better
+                .ToList();
         }
 
         public IList<Product> ParseProducts(IEnumerable<string> rawStrings)
@@ -90,16 +111,16 @@ namespace Pipeline
         /// <summary>
         /// Remove accessories (batteries etc.) from product matches
         /// </summary>
-        private IEnumerable<ProductMatch> PruneMatches(IDictionary<string, float> probablityPerToken, IEnumerable<ProductMatch> possibleMatches)
+        private IEnumerable<ProductMatch> PruneMatches(IDictionary<string, float> probablityPerToken, IEnumerable<ProductMatch> possibleMatches, IEnumerable<ExchangeRate> erates)
         {
-            _log(String.Format("Pruning non camera listings"));
+            _log("Pruning non camera listings");
 
-            var costClassifier = GetPriceOutlierClassifier();
+            var costClassifier = new ProductPriceOutlierClassifer(erates);
             var accessoryClassifier = new HeuristicClassifier();
 
             foreach(var match in possibleMatches)
             {
-                var withoutAccessories = PruneAccessoryListings(probablityPerToken, accessoryClassifier, match);
+                var withoutAccessories = PruneAccessoryListings(accessoryClassifier, match);
 
                 var withTypicalPrices = PrunePriceOutliers(costClassifier, withoutAccessories);
 
@@ -107,10 +128,10 @@ namespace Pipeline
             }
         }
 
-        private ProductMatch PruneAccessoryListings(IDictionary<string, float> probablityPerToken, HeuristicClassifier accessoryClassifier, ProductMatch match)
+        private ProductMatch PruneAccessoryListings(HeuristicClassifier accessoryClassifier, ProductMatch match)
         {
             var accessoryScores =  match.Listings
-                .Select(x => new { Listing = x, IsCamera = accessoryClassifier.ClassifyAsCamera(probablityPerToken, x) })
+                .Select(x => new { Listing = x, IsCamera = accessoryClassifier.ClassifyAsCamera(x) })
                 .ToList();
 
             accessoryScores
@@ -141,30 +162,12 @@ namespace Pipeline
                 _log(String.Format("Pruned price outlier: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
             }
 
-            // TODO: Remove
-            //if (withPriceOutlierScore.Any(x => x.Listing.Title.Contains("2 7 inch purecolor lcd")))
-                //Debugger.Break();
-
             var cameras = withPriceOutlierScore
                 .Where(x => x.IsCamera)
                 .Select(x => x.Listing)
                 .ToList();
 
             return new ProductMatch(match.Product, cameras);
-        }
-
-        private static ProductPriceOutlierClassifer GetPriceOutlierClassifier()
-        {
-            // TODO: Get rates from file
-            // TODO: Add time ranges rate is valid for
-            var rates = new[]
-            {
-                new ExchangeRate { SourceCurrencyCode = "cad", DestinationCurrencyCode = "cad", Rate = 1M },
-                new ExchangeRate { SourceCurrencyCode = "usd", DestinationCurrencyCode = "cad", Rate = 1.3M },
-                new ExchangeRate { SourceCurrencyCode = "eur", DestinationCurrencyCode = "cad", Rate = 1.4M },
-                new ExchangeRate { SourceCurrencyCode = "gbp", DestinationCurrencyCode = "cad", Rate = 1.8M }
-            };
-            return new ProductPriceOutlierClassifer(rates);
         }
 
         private IEnumerable<ManufacturerNameProductsBlock> BlockProductsByManufacturer(ICollection<Product> products, HashSet<string> canonicalManufacturerNames)
@@ -175,7 +178,7 @@ namespace Pipeline
 
         private IEnumerable<ManufacturerNameListingsBlock> BlockListingsByManufacturer(ICollection<Product> products, ICollection<Listing> listings, HashSet<string> canonicalManufacturerNames, IDictionary<string, float> tokenProbablities)
         {
-            _log(String.Format("Blocking listings by manufacturer name"));
+            _log("Blocking listings by manufacturer name");
 
             var aliases = new SimilarityAliasGenerator().Generate(products, listings, tokenProbablities);
             var listingBlockGrouper = new ManufacturerListingsBlockGrouper(canonicalManufacturerNames, aliases);

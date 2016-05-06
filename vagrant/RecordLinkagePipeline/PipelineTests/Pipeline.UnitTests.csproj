@@ -63,6 +63,7 @@
     <Compile Include="Analysis\SimilarityAliasGeneratorTests.cs" />
     <Compile Include="Classification\HeuristicClassifierTests.cs" />
     <Compile Include="Extraction\FieldMungerTests.cs" />
+    <Compile Include="Extraction\ExchangeRateParserTests.cs" />
     <Compile Include="Infrastructure\IListTExtensionsTests.cs" />
     <Compile Include="Infrastructure\IListDoubleExtensionsTests.cs" />
     <Compile Include="Infrastructure\StringExtensionsTests.cs" />

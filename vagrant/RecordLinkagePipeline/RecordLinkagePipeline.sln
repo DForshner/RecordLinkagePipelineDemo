@@ -9,6 +9,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipeline", "Pipeline\Pipeli
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Resources", "Resources", "{DE581BB1-DACC-4C51-9469-A3A30E254D8A}"
 	ProjectSection(SolutionItems) = preProject
+		Resources\accessoryTrainingSet.txt = Resources\accessoryTrainingSet.txt
+		Resources\cameraTrainingSet.txt = Resources\cameraTrainingSet.txt
+		Resources\exchangeRates.txt = Resources\exchangeRates.txt
 		Resources\listings.txt = Resources\listings.txt
 		Resources\products.txt = Resources\products.txt
 	EndProjectSection

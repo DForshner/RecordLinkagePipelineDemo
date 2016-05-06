@@ -57,6 +57,7 @@
     <Compile Include="Analysis\DeterministicAliasGenerator.cs" />
     <Compile Include="Classification\NaiveBayesCameraClassifier.cs" />
     <Compile Include="Extraction\FieldMunger.cs" />
+    <Compile Include="Extraction\ExchangeRateParser.cs" />
     <Compile Include="Infrastructure\FloatExtensions.cs" />
     <Compile Include="Infrastructure\IListFloatExtensions.cs" />
     <Compile Include="Infrastructure\IListTExtensions.cs" />

@@ -1,0 +1,4 @@
+{ "source": "cad", "destination": "cad", "rate": 1.0 }
+{ "source": "usd", "destination": "cad", "rate": 1.3 }
+{ "source": "eur", "destination": "cad", "rate": 1.4 }
+{ "source": "gbp", "destination": "cad", "rate": 1.8 }

@@ -28,7 +28,8 @@ namespace Processor
             // I'm passing these as functions to keep external I/O concerns out of the pipeline module. Could also use interface + constructor injection.
             Func<IEnumerable<string>> products = () =>  new FileReader().ReadLines("./Resources/products.txt");
             Func<IEnumerable<string>> listings = () =>  new FileReader().ReadLines("./Resources/listings.txt");
-            var matches = pipeline.FindMatches(products, listings);
+            Func<IEnumerable<string>> erates = () =>  new FileReader().ReadLines("./Resources/exchangeRates.txt");
+            var matches = pipeline.FindMatches(products, listings, erates);
 
             System.IO.File.WriteAllLines(@"./log.txt", _linesToLog.Select(x => x));
             System.IO.File.WriteAllLines(@"./results.txt", ToJSON(matches));
