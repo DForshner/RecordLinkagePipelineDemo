@@ -10,7 +10,7 @@ namespace Pipeline.Matching
     /// <summary>
     /// Finds the best matching product for each listing.
     /// </summary>
-    public class ProductModelMatcher
+    internal class ProductModelMatcher
     {
         public Tuple<IEnumerable<ProductMatch>, IEnumerable<Listing>> FindProductMatchs(
             ManufacturerNameListingsBlock listingBlock, ManufacturerNameProductsBlock productBlock, IDictionary<string, float> probablityPerToken)

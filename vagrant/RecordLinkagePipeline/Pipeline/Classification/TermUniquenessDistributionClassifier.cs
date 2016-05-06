@@ -15,7 +15,7 @@ namespace Pipeline.Classification
     ///
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/ClassifyingDocumentsUsingDistributionOfTermUniqueness.cs
     /// </summary>
-    public class TermUniquenessDistributionClassifier
+    internal class TermUniquenessDistributionClassifier
     {
         private const int NUM_BUCKETS = 15;
         private const double CLASSIFICATION_RATIO = 0.33D;

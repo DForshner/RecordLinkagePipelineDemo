@@ -11,7 +11,7 @@ namespace Pipeline.Classification
     /// Everything here was found by trial and error for the given dataset so this
     /// approach isn't going to scale gracefully as listings in new languages are added.
     /// </summary>
-    public class HeuristicClassifier
+    internal class HeuristicClassifier
     {
         private static HashSet<string> _wordsAssociatedWithAccessoryListings = new[]
         {

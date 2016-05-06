@@ -4,7 +4,7 @@ using Pipeline.Shared;
 
 namespace Pipeline.Extraction
 {
-    static class ExchangeRateParser
+    internal static class ExchangeRateParser
     {
         public static ExchangeRate Parse(String str)
         {

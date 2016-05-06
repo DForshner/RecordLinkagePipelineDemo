@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Pipeline.Analysis
 {
-    public class CanonicalManufacturerNameGenerator
+    internal class CanonicalManufacturerNameGenerator
     {
         public HashSet<string> Generate(IEnumerable<Product> products)
         {

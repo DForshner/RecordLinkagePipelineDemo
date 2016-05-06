@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Pipeline.Matching
 {
-    public class ManufacturerListingsBlockGrouper
+    internal class ManufacturerListingsBlockGrouper
     {
         private readonly HashSet<string> _canonical;
         private readonly IDictionary<string, string> _aliases;

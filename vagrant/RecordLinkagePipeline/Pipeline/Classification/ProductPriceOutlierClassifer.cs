@@ -11,7 +11,7 @@ namespace Pipeline.Classification
     /// The same product model should have somewhat similar prices.
     /// Compares all listings for a particular model and remove any outliers.
     /// </summary>
-    public class ProductPriceOutlierClassifer
+    internal class ProductPriceOutlierClassifer
     {
         private const decimal LOWER_RANGE_MULTIPLIER = 0.5M;
         private const decimal UPPER_RANGE_MULTIPLIER = 5M;

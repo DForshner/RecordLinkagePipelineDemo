@@ -4,7 +4,7 @@ using Pipeline.Infrastructure;
 
 namespace Pipeline.Analysis
 {
-    public class WordFrequencyPerCollection
+    internal class WordFrequencyPerCollection
     {
         public IDictionary<string, double> Count<T>(IEnumerable<T> docs, Func<T, String> selector)
         {

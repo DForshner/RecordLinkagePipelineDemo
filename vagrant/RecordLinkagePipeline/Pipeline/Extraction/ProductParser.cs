@@ -4,7 +4,7 @@ using Pipeline.Shared;
 
 namespace Pipeline.Extraction
 {
-    static class ProductParser
+    internal static class ProductParser
     {
         public static Product Parse(String str)
         {
