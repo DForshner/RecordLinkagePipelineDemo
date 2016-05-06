@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Pipeline.Matching
 {
-    public class ManufacturerProductsBlockGrouper
+    internal class ManufacturerProductsBlockGrouper
     {
         public IEnumerable<ManufacturerNameProductsBlock> Match(IEnumerable<Product> productsToMatch, IEnumerable<string> canonicalManufacturerNames)
         {
@@ -19,7 +19,7 @@ namespace Pipeline.Matching
                 matched[toMatch.Manufacturer].Add(toMatch);
             }
 
-            return matched.Select(x => new ManufacturerNameProductsBlock { ManufacturerName = x.Key, Products = x.Value });
+            return matched.Select(x => new ManufacturerNameProductsBlock(x.Key, x.Value));
         }
     }
 }
