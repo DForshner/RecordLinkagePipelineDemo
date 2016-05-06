@@ -12,7 +12,7 @@ namespace Pipeline.Shared
 
         public ManufacturerNameAlias(string canonical, string alias)
         {
-            if (String.IsNullOrEmpty(canonical)) { throw new ArgumentNullException("manufacturerName"); }
+            if (String.IsNullOrEmpty(canonical)) { throw new ArgumentNullException("canonical"); }
             if (String.IsNullOrEmpty(alias)) { throw new ArgumentNullException("alias"); }
 
             this.Canonical = canonical;
