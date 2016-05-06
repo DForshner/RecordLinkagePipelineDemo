@@ -1,12 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
 namespace Pipeline.Classification
 {
     /// <summary>
-    /// Examine each listing and try to classify it as a camera using deterministic rules/heuristics
+    /// Examine each listing and try to classify it as a camera using deterministic heuristics.
+    ///
+    /// Everything here was found by trial and error for the given dataset so this
+    /// approach isn't going to scale gracefully as listings in new languages are added.
     /// </summary>
     public class HeuristicClassifier
     {
@@ -14,36 +16,50 @@ namespace Pipeline.Classification
         {
             "bag",
             "body",
-            "battery"
+            "battery",
+            "only",
+
+            // Look for phrase "for {manufacturer name}" and "for {model}"
+            "for",
+            "für",
+            "pour"
         };
 
         private static string[] _wordsAssociatedWithCameraListings = new[]
         {
             "mp",
             "megapixel",
+            "mega",
+            "pixel",
+            "mpix",
+            "compact",
             "zoom",
             "optical",
             "stabilized",
             "digitalkamera",
-            "digital"
+            "digital",
+
+            // Look for phrase "camera with {feature}"
+            "with",
+            "livré avec"
         };
 
-        public bool ClassifyAsCamera(IDictionary<string, float> probablityPerToken, Listing listing)
+        public bool ClassifyAsCamera(Listing listing)
         {
-            // 1) Examine listing price
+            // Approach 1 - Examine listing price
 
-            // Score low cost listings (probability accessories) in proportion to how near zero they are.
             // TODO: Normalize price?
-            const int LOW_COST = 75;
+            // Score low prices (probability accessories) in proportion to how near zero they are.
+            const int LOW_COST = 80;
             var lowCostScore = (listing.Price < LOW_COST)
-                ? ((1 - (listing.Price / LOW_COST)) * -100)
+                // Score is power of 2 to how near zero the price is
+                ? -100 * (LOW_COST - (listing.Price * listing.Price) / LOW_COST) / LOW_COST
                 : 0;
 
-            var titleTokens = listing.Title.TokenizeOnWhiteSpace();
-
-            // 2) Examine words in title.
+            // Approach 2 - Examine words in title.
 
             // Look for words typically associated with accessories
+            var titleTokens = listing.Title.TokenizeOnWhiteSpace();
             const int NON_CAMERA_WORD_WEIGHT = -20;
             var accessoryWordsScore = _wordsAssociatedWithAccessoryListings
                 .Where(x => titleTokens.Contains(x))
@@ -57,7 +73,7 @@ namespace Pipeline.Classification
                 .Select(x => CAMERA_WORD_WEIGHT)
                 .Sum();
 
-            // 3) Examine title sentence structure
+            // Approach 3 - Examine sentence structure
 
             // Look for phrase "camera with {feature}"
             // TODO: Handle other languages. Ex: "Livré avec chargeur"
@@ -75,6 +91,7 @@ namespace Pipeline.Classification
             // TODO: Check following word is a manufacturer name or product model
             var phraseAccessoryForCameraWithScore = (forWordIdx > 0 && withWordIdx > 0 && forWordIdx < withWordIdx) ? -100 : 0;
 
+            // Combine scores together to produce a final score.
             var isCameraScore = 100
                 + lowCostScore / 6
                 + accessoryWordsScore / 6
