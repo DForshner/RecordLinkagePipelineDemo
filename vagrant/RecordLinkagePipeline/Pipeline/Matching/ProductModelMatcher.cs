@@ -29,11 +29,33 @@ namespace Pipeline.Matching
                 Product bestMatch = null;
                 foreach (var product in productBlock.Products)
                 {
-                    var productTokens = product.Model.TokenizeOnWhiteSpace();
-                    var productTokensToCheck = (productTokens.Length == 1) ? productTokens : productTokens.CreateBiTriTokenShingles().ToArray();
+                    // TODO: memoize or pre-compute this product token stuff so it's not be recalculated each loop
+                    var modelTokens = product.Model.TokenizeOnWhiteSpace();
+
+                    var score = 0F;
+
+                    // Handle case where model doesn't have product family name included
+                    // TODO: Make this less ridiculous
+                    var familyTokens = product.Family.TokenizeOnWhiteSpace();
+                    var modelMissingFamily = familyTokens.Where(x => !modelTokens.Contains(x));
+                    foreach(var token in modelMissingFamily)
+                    {
+                        if (!listing.Title.Contains(token))
+                            score = float.MinValue;
+                    }
+
+                    // Check that every token exists in listing
+                    foreach(var token in modelTokens)
+                    {
+                        if (!listing.Title.Contains(token))
+                            score = float.MinValue;
+                    }
+
+                    var productTokensToCheck = (modelTokens.Length == 1)
+                        ? modelTokens
+                        : modelTokens.CreateBiTriTokenShingles().ToArray();
 
                     // TODO: Score using probability of term occurring in listings
-                    var score = 0F;
                     foreach(var token in listingShingles)
                     {
                         if (productTokensToCheck.Contains(token))
@@ -44,15 +66,16 @@ namespace Pipeline.Matching
 
                     if (score > bestScore)
                     {
-                        bestScore = score / productTokens.Length; // Normalize by # terms in model name so longer model names aren't weighted extra
+                        bestScore = score / productTokensToCheck.Length; // Normalize by # terms in model name so longer model names aren't weighted extra
                         bestMatch = product;
                     }
                 }
 
                 if (bestMatch == null)
                 {
+                    // No product matches found for listing
                     unmatched.Add(listing);
-                    continue; // No product matches found for listing
+                    continue;
                 }
 
                 if (!matches.ContainsKey(bestMatch)) { matches.Add(bestMatch, new List<Listing>()); }
