@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace Pipeline.Shared
 {
+    /// <summary>
+    /// A product and its matching listings
+    /// </summary>
     public class ProductMatch
     {
         public Product Product { get; private set; }

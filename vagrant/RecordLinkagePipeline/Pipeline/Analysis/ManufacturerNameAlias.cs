@@ -1,11 +1,11 @@
 ﻿using System;
 
-namespace Pipeline.Shared
+namespace Pipeline.Analysis
 {
     /// <summary>
     /// Manufacturer name alias
     /// </summary>
-    public class ManufacturerNameAlias
+    internal class ManufacturerNameAlias
     {
         public readonly string Canonical;
         public readonly string Alias;

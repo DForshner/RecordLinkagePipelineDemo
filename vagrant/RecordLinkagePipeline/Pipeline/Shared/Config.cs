@@ -1,7 +1,10 @@
 ﻿
-namespace Pipeline
+namespace Pipeline.Shared
 {
-    public class Config
+    /// <summary>
+    /// Configuration for pipeline
+    /// </summary>
+    internal class Config
     {
         // Alias generation
         public int ManufacturerNameCutoff { get; set; }

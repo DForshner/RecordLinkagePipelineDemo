@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Pipeline.Analysis;
 using Pipeline.Matching;
 using Pipeline.Shared;
 

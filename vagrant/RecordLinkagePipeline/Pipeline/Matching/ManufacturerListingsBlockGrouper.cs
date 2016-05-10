@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Pipeline.Analysis;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 

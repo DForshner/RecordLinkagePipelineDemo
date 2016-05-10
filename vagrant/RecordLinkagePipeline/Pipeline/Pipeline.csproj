@@ -55,7 +55,7 @@
     <Compile Include="Analysis\TokenProbablityPerListingCalculator.cs" />
     <Compile Include="Analysis\SimilarityAliasGenerator.cs" />
     <Compile Include="Classification\NaiveBayesCameraClassifier.cs" />
-    <Compile Include="Config.cs" />
+    <Compile Include="Shared\Config.cs" />
     <Compile Include="Extraction\ConfigParser.cs" />
     <Compile Include="Extraction\FieldMunger.cs" />
     <Compile Include="Extraction\ExchangeRateParser.cs" />
@@ -74,11 +74,11 @@
     <Compile Include="Shared\ExchangeRate.cs" />
     <Compile Include="Shared\ITextReader.cs" />
     <Compile Include="Shared\ITextWriter.cs" />
-    <Compile Include="Shared\ManufacturerNameProductsBlock.cs" />
+    <Compile Include="Matching\ManufacturerNameProductsBlock.cs" />
     <Compile Include="Shared\ProductMatch.cs" />
-    <Compile Include="Shared\ManufacturerNameAlias.cs" />
+    <Compile Include="Analysis\ManufacturerNameAlias.cs" />
     <Compile Include="Shared\Listing.cs" />
-    <Compile Include="Shared\ManufacturerNameListingsBlock.cs" />
+    <Compile Include="Matching\ManufacturerNameListingsBlock.cs" />
     <Compile Include="Matching\ProductModelMatcher.cs" />
     <Compile Include="Matching\ManufacturerListingsBlockGrouper.cs" />
     <Compile Include="Shared\Product.cs" />

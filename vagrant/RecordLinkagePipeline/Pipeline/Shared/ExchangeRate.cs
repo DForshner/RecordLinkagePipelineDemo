@@ -1,7 +1,7 @@
 ﻿
 namespace Pipeline.Shared
 {
-    public class ExchangeRate
+    internal class ExchangeRate
     {
         public string SourceCurrencyCode { get; set; }
 

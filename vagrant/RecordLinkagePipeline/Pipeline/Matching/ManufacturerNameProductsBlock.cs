@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using Pipeline.Shared;
 
-namespace Pipeline.Shared
+namespace Pipeline.Matching
 {
-    public class ManufacturerNameProductsBlock
+    /// <summary>
+    /// Products grouped by manufacturer name
+    /// </summary>
+    internal class ManufacturerNameProductsBlock
     {
         public string ManufacturerName { get; private set; }
         public ICollection<Product> Products { get; private set; }
