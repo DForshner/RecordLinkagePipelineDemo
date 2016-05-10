@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pipeline.Classification;
 using Pipeline.Shared;
@@ -22,7 +23,7 @@ namespace Pipeline.UnitTests.Classification
                 new Listing { Price = 110M, CurrencyCode = "CAD" },
             });
 
-            var results = new ProductPriceOutlierClassifer(ratesBySrc).ClassifyAsCamera(matches);
+            var results = CreateSut(ratesBySrc).ClassifyAsCamera(matches);
             Assert.AreEqual(3, results.Count());
         }
 
@@ -48,7 +49,7 @@ namespace Pipeline.UnitTests.Classification
                 new Listing { Price = 2000M, CurrencyCode = "CAD" },
             });
 
-            var results = new ProductPriceOutlierClassifer(ratesBySrc).ClassifyAsCamera(matches)
+            var results = CreateSut(ratesBySrc).ClassifyAsCamera(matches)
                 .Where(x => x.Item2)
                 .Select(x => x.Item1.Price);
 
@@ -62,11 +63,16 @@ namespace Pipeline.UnitTests.Classification
             var prices = new[] { 306M, 420M, 365M, 386M, 451M, 515M };
             var matches = new ProductMatch(new Product(), prices.Select(x => new Listing { Price = x, CurrencyCode = "" }).ToList());
 
-            var results = new ProductPriceOutlierClassifer(Enumerable.Empty<ExchangeRate>()).ClassifyAsCamera(matches)
+            var results = CreateSut(Enumerable.Empty<ExchangeRate>()).ClassifyAsCamera(matches)
                 .Where(x => x.Item2)
                 .Select(x => x.Item1.Price);
 
             Assert.AreEqual(6, results.Count());
+        }
+
+        private static ProductPriceOutlierClassifer CreateSut(IEnumerable<ExchangeRate> ratesBySrc)
+        {
+            return new ProductPriceOutlierClassifer(ratesBySrc, 0.5M, 5M);
         }
     }
 }

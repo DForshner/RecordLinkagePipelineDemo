@@ -64,8 +64,10 @@
     <Compile Include="Classification\HeuristicClassifierTests.cs" />
     <Compile Include="Extraction\FieldMungerTests.cs" />
     <Compile Include="Extraction\ExchangeRateParserTests.cs" />
+    <Compile Include="Infrastructure\IEnumerableIntExtensionsTests.cs" />
     <Compile Include="Infrastructure\IListTExtensionsTests.cs" />
     <Compile Include="Infrastructure\IListDoubleExtensionsTests.cs" />
+    <Compile Include="Infrastructure\StringArrayExtensionsTests.cs" />
     <Compile Include="Infrastructure\StringExtensionsTests.cs" />
     <Compile Include="Infrastructure\IListDecimalExtensionsTests.cs" />
     <Compile Include="Matching\ProductModelMatcherTests.cs" />

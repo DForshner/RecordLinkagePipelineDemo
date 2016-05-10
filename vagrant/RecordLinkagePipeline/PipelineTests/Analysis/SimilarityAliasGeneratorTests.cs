@@ -21,7 +21,7 @@ namespace Pipeline.UnitTests.Analysis
             };
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
 
-            var result = new SimilarityAliasGenerator().Generate(products, listings, termProbablities).Single();
+            var result = CreateSut().Generate(products, listings, termProbablities).Single();
 
             Assert.AreEqual("acme", result.Canonical);
             Assert.AreEqual("acme corp", result.Alias);
@@ -42,7 +42,7 @@ namespace Pipeline.UnitTests.Analysis
             };
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
 
-            var result = new SimilarityAliasGenerator().Generate(products, listings, termProbablities).Single();
+            var result = CreateSut().Generate(products, listings, termProbablities).Single();
 
             Assert.AreEqual("acme", result.Canonical);
             Assert.AreEqual("acme corp", result.Alias);
@@ -63,9 +63,14 @@ namespace Pipeline.UnitTests.Analysis
             };
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
 
-            var results = new SimilarityAliasGenerator().Generate(products, listings, termProbablities);
+            var results = CreateSut().Generate(products, listings, termProbablities);
 
             Assert.IsFalse(results.Any());
+        }
+
+        private static SimilarityAliasGenerator CreateSut()
+        {
+            return new SimilarityAliasGenerator(33, 0.50F, 0.90F);
         }
     }
 }

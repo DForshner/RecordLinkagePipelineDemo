@@ -14,21 +14,22 @@ namespace Pipeline.UnitTests.Matching
         [TestMethod]
         public void WhenProductModelMatchesListingTitle_ExpectMatched()
         {
+            var expectedMatch = "modela foo bar baz";
             var listingBlock = MakeListingBlock(new[]
             {
-                MakeListing("modela")
+                MakeListing(expectedMatch),
+                MakeListing("modelc cat dog bee")
             });
-            var productBlock = MakeProductBlock(new[] { MakeProduct("modela"), MakeProduct("modelb") });
-            var termProbablities = new Dictionary<string, float>
+            var productBlock = MakeProductBlock(new[]
             {
-                { "modela", 0.1F },
-                { "modelb", 0.1F },
-            };
+                MakeProduct("modela"),
+                MakeProduct("modelb")
+            });
 
-            var result = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+            var result = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
             Assert.AreEqual("modela", result.Product.Model);
-            Assert.AreEqual("modela", result.Listings.Single().Title);
+            Assert.AreEqual(expectedMatch, result.Listings.Single().Title);
         }
 
         [TestMethod]
@@ -52,7 +53,7 @@ namespace Pipeline.UnitTests.Matching
             var productBlock = MakeProductBlock(new[] { MakeProduct("pdr m60") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
             Assert.AreEqual(1, results.Listings.Count);
             Assert.AreEqual(matchingListingTitle, results.Listings.Single().Title);
@@ -75,12 +76,11 @@ namespace Pipeline.UnitTests.Matching
             var matchingProductModel = FieldMunger.Munge("SX130 IS");
             var productBlock = MakeProductBlock(new[]
             {
-                new Product { Model = FieldMunger.Munge("130 IS") },
-                new Product { Model = matchingProductModel }
+                MakeProduct(matchingProductModel),
+                MakeProduct("130 IS"),
             });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
             Assert.AreEqual(1, results.Listings.Count);
             Assert.AreEqual(matchingListingTitle, results.Listings.Single().Title);
@@ -92,16 +92,45 @@ namespace Pipeline.UnitTests.Matching
         {
             var listingBlock = MakeListingBlock(new[]
             {
+                // Match
                 MakeListing("PANASONIC Lumix DMC-FX70 - noir + Etui Pixmania Compact 11 X 3.5 X 8 CM NOIR + Carte mémoire SDHC 8 Go"),
                 MakeListing("PANASONIC Lumix DMC-FX70 - noir + Etui Pixmania compact cuir 11 x 3,5 x 8 cm + Carte mémoire SDHC 16 Go"),
-                MakeListing("PANASONIC Lumix DMC-FX70 - black")
+                MakeListing("PANASONIC Lumix DMC-FX70 - black"),
+
+                // No Match
+                MakeListing("Sony DSC-TX1 Digitalkamera (10 Megapixel, 4-fach opt. Zoom, 7,6 cm (3 Zoll) Display) blau"),
+                MakeListing("EOS 550D + 18-55 IS + Lowepro (Kit 18-55 mm IS)"),
             });
-            var productBlock = MakeProductBlock(new[] { MakeProduct("dmc-fx70") });
+            var productBlock = MakeProductBlock(new[] {
+                MakeProduct("dmc-fx70")
+            });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
             Assert.AreEqual(3, results.Listings.Count);
+        }
+
+        [TestMethod]
+        public void WhenTitleContainsModelButNotFamily_ExpectMatch()
+        {
+            var listingBlock = MakeListingBlock(new[]
+            {
+                // Match
+                MakeListing("Sony DSC-TX1 Digitalkamera (10 Megapixel, 4-fach opt. Zoom, 7,6 cm (3 Zoll) Display) blau"),
+
+                // No Match
+                MakeListing("PANASONIC Lumix DMC-FX70 - noir + Etui Pixmania compact cuir 11 x 3,5 x 8 cm + Carte mémoire SDHC 16 Go"),
+            });
+            var productBlock = MakeProductBlock(new[]
+            {
+                MakeProduct("DSC-TX1", "Cyber-shot")
+            });
+            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
+
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
+
+            Assert.AreEqual(1, results.Listings.Count);
         }
 
         [TestMethod]
@@ -121,14 +150,14 @@ namespace Pipeline.UnitTests.Matching
             var productBlock = MakeProductBlock(new[] { MakeProduct("DSLR-A850") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
             Assert.AreEqual(2, results.Listings.Count);
             Assert.IsTrue(results.Listings.All(x => x.Manufacturer == "MATCH"));
         }
 
         [TestMethod]
-        public void WhenModelLacksFamilyName_ExpectFamilyRequiredForJoin()
+        public void WhenProductHasFamily_ExpectFamilyRequiredForJoin()
         {
             var listingBlock = MakeListingBlock(new[]
             {
@@ -137,24 +166,28 @@ namespace Pipeline.UnitTests.Matching
                 MakeListing("Canon IXUS 105 Digitalkamera (12 Megapixel, 4-fach opt. Zoom, 6.9 cm (2.7 Zoll) Display, bildstabilisiert) aqua"),
 
                 // No match
-                MakeListing("Canon EOS 5D Mark II 21.1MP Full Frame CMOS Digital SLR Camera with EF 24-105mm f/4 L IS USM Lens"),
                 MakeListing("Canon EOS Digital Rebel T1i SLR Camera Dental Kit - Economy Version - Black Finish- - with Sigma 105/2.8 Macro Lens, Adorama Macro Ring Flash, Spare LP-E5 Type Battery"),
-                MakeListing("AgfaPhoto OPTIMA 105 Digitalkamera (14 Megapixel, 3-fach opt. Zoom, 3 Zoll Display) schwarz"),
+                MakeListing("Canon EOS 5D Mark II 21.1MP Full Frame CMOS Digital SLR Camera with EF 24-105mm f/4 L IS USM Lens"),
             });
-            var productBlock = MakeProductBlock(new[] { MakeProduct("105", "IXUS") });
+            var productBlock = MakeProductBlock(new[]
+            {
+                MakeProduct("105", "IXUS"),
+                MakeProduct("T1i", "Rebel")
+            });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1;
+            var ixusResults = results.Single(x => x.Product.Family == "ixus");
 
-            Assert.AreEqual(2, results.Listings.Count);
-            Assert.IsTrue(results.Listings.All(x => x.Title.Contains("canon ixus 105")));
+            Assert.AreEqual(2, ixusResults.Listings.Count);
+            Assert.IsTrue(ixusResults.Listings.All(x => x.Title.Contains("canon ixus 105")));
         }
 
         /// <summary>
         /// Fix bug where listings for same family but different model were being joined.
         /// </summary>
         [TestMethod]
-        public void WhenModelLacksFamilyName_ExpectModelRequiredForJoin()
+        public void WhenProductHasFamily_ExpectModelRequiredForJoin()
         {
             var listingBlock = MakeListingBlock(new[]
             {
@@ -165,26 +198,25 @@ namespace Pipeline.UnitTests.Matching
             });
             var productBlock = MakeProductBlock(new[] { MakeProduct("600", "powershot") });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1;
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1;
             Assert.AreEqual(0, results.Count());
         }
 
         [TestMethod]
-        public void WhenModelLacksFamilyName_ExpectFamilyNameTokenOrderUsedInJoin()
+        public void WhenProductHasFamily_ExpectFamilyNameTokenOrderUsedInJoin()
         {
             var listingBlock = MakeListingBlock(new[]
             {
-                // Match
+                // (D-LUX) Match
                 MakeListing("Leica D-LUX 5"),
                 MakeListing("Leica 18151 D-Lux 5 Digital Camera"),
 
-                // No match
+                // (V-LUX) No match
                 MakeListing("Leica V-LUX 2 14.1 MP Digital Camera with 4.5-108mm Leica Lens + 32GB Accessory Kit")
             });
             var productBlock = MakeProductBlock(new[] { MakeProduct("5", "D-LUX") });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1.Single();
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
             Assert.AreEqual(2, results.Listings.Count());
             Assert.IsTrue(results.Listings.All(x => x.Title.Contains("d lux 5")));
@@ -194,15 +226,22 @@ namespace Pipeline.UnitTests.Matching
         /// Fix bug where listings for same family but different model were being joined.
         /// </summary>
         [TestMethod]
-        public void WhenThreePartModelName_ExpectAllPartsPresentInTitle()
+        public void WhenThreePartModel_ExpectAllPartsPresentInTitle()
         {
             var listingBlock = MakeListingBlock(new[]
             {
-                MakeListing("olympus pen e pl1 red m zuiko digital ed 14 42 mm lens expert shot backpack for digital cameras"),
+                MakeListing("olympus pen e pl 1 red m zuiko digital ed 14 42 mm"),
+                MakeListing("olympus pen e pl1 red m zuiko digital ed 14 42 mm"),
+                MakeListing("olympus pene pl1 red m zuiko digital ed 14 42 mm"),
+                MakeListing("olympus pen epl1 red m zuiko digital ed 14 42 mm"),
+                MakeListing("olympus penepl1 red m zuiko digital ed 14 42 mm"),
             });
-            var productBlock = MakeProductBlock(new[] { MakeProduct("pen e pl2") });
+            var productBlock = MakeProductBlock(new[]
+            {
+                MakeProduct("pen e pl2")
+            });
             var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
-            var results = GetSut().FindProductMatchs(listingBlock, productBlock, termProbablities).Item1;
+            var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1;
             Assert.AreEqual(0, results.Count());
         }
 

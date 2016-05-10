@@ -38,7 +38,7 @@ namespace Pipeline.UnitTests.Classification
 
         private static NaiveBayesCameraClassifier GetSut()
         {
-            return new NaiveBayesCameraClassifier(_cameraTrainingSet, _accessoryTrainingSet);
+            return new NaiveBayesCameraClassifier(_cameraTrainingSet, _accessoryTrainingSet, 3, 0.90F);
         }
     }
 }
