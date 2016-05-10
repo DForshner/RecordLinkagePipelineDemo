@@ -1,5 +1,7 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Pipeline.Infrastructure;
@@ -8,26 +10,12 @@ using Pipeline.Shared;
 namespace Pipeline.Analysis
 {
     /// <summary>
-    /// Finds listings for similar manufacturer names and models to generate a list of aliases for manufacturers
+    /// Finds listings for similar manufacturer names and models to generate a list of aliases for manufacturers.
+    ///
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/AliasGenerationBySimilarManufacturerAndModel.cs
     /// </summary>
     internal class SimilarityAliasGenerator
     {
-        /// <summary>
-        /// Note: needs to be low enough to match "fuji" up with "fujifilm"
-        /// </summary>
-        private const int MANUFACTURER_NAME_MATCH_CUTOFF = 33;
-
-        /// <summary>
-        /// Words with scores above this percentile are considered good alias candidates.
-        /// </summary>
-        private const float POSSIBLE_ALIAS_PERCENTILE = 0.50F;
-
-        /// <summary>
-        /// Words with occurrence probabilities above this percentile are considered common and won't be used when joining listings to products.
-        /// </summary>
-        private const float COMMON_WORD_PERCENTILE = 0.90F;
-
         private class PossibleAlias
         {
             public string Canonical { get; set; }
@@ -51,8 +39,33 @@ namespace Pipeline.Analysis
             }
         }
 
+        private readonly int _manufacturerNameCutoff;
+        private readonly float _possibleAliasPercentile;
+        private readonly float _commonWordPercentile;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="manufacturerNameCutoff">Note: needs to be low enough to match "fuji" up with "fujifilm"</param>
+        /// <param name="possibleAliasPercentile">Words with scores above this percentile are considered good alias candidates.</param>
+        /// <param name="commonWordPercentile">Words with occurrence probabilities above this percentile are considered common and won't be used when joining listings to products.</param>
+        public SimilarityAliasGenerator(int manufacturerNameCutoff, float possibleAliasPercentile, float commonWordPercentile)
+        {
+            if (manufacturerNameCutoff < 0 || manufacturerNameCutoff > 100) { throw new ArgumentOutOfRangeException("manufacturerNameCutoff"); }
+            if (possibleAliasPercentile < 0 || possibleAliasPercentile > 1) { throw new ArgumentOutOfRangeException("possibleAliasPercentile"); }
+            if (commonWordPercentile < 0 || commonWordPercentile > 1) { throw new ArgumentOutOfRangeException("commonWordPercentile"); }
+
+            _manufacturerNameCutoff = manufacturerNameCutoff;
+            _possibleAliasPercentile = possibleAliasPercentile;
+            _commonWordPercentile = commonWordPercentile;
+        }
+
         public IEnumerable<ManufacturerNameAlias> Generate(ICollection<Product> products, ICollection<Listing> listings, IDictionary<string, float> tokenProbablities)
         {
+            Debug.Assert(products != null, "expected products not null");
+            Debug.Assert(products != null, "expected listings not null");
+            Debug.Assert(tokenProbablities != null, "expected tokenProbablities not null");
+
             var commonTokens = GetCommonTokens(tokenProbablities);
             var modelShinglesByModelName = Task.Run(() => GenerateModelNameShingles(commonTokens, products));
             var manuNameNGramsByCanonicalManuName = Task.Run(() => GenerateManufacturerNameNGrams(products));
@@ -72,7 +85,7 @@ namespace Pipeline.Analysis
                         var manuNameMatchScore = CompareManufacturerNameSimilarity(manuNameNGramsByCanonicalManuName.Result, listing.Manufacturer, product.Manufacturer);
 
                         // Want "fuji" to be an alias for "fujifilm"
-                        if (manuNameMatchScore < MANUFACTURER_NAME_MATCH_CUTOFF)
+                        if (manuNameMatchScore < _manufacturerNameCutoff)
                             continue; // Names are too different
 
                         const int PERFECT_MATCH = 100;
@@ -103,7 +116,7 @@ namespace Pipeline.Analysis
                     }
                 });
 
-            var percentileCutoff = (possibleAliasesByCanonical.Count > 1) ? possibleAliasesByCanonical.Values.ToList().FindPercentile(POSSIBLE_ALIAS_PERCENTILE) : 0F;
+            var percentileCutoff = (possibleAliasesByCanonical.Count > 1) ? possibleAliasesByCanonical.Values.ToList().FindPercentile(_possibleAliasPercentile) : 0F;
 
             return possibleAliasesByCanonical
                 .Where(x => x.Value > percentileCutoff)
@@ -133,10 +146,10 @@ namespace Pipeline.Analysis
             return modelScore;
         }
 
-        private static HashSet<string> GetCommonTokens(IDictionary<string, float> tokenFrequencies)
+        private HashSet<string> GetCommonTokens(IDictionary<string, float> tokenFrequencies)
         {
             var sortedFreqs = tokenFrequencies.Values.OrderBy(x => x).ToList();
-            var percentialCutoff = sortedFreqs[(int)((float)sortedFreqs.Count * COMMON_WORD_PERCENTILE)];
+            var percentialCutoff = sortedFreqs[(int)((float)sortedFreqs.Count * _commonWordPercentile)];
             return new HashSet<string>(tokenFrequencies.Where(x => x.Value > percentialCutoff).Select(x => x.Key));
         }
 

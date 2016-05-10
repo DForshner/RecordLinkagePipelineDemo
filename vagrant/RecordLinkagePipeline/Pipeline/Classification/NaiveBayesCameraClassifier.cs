@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Pipeline.Infrastructure;
@@ -8,67 +9,81 @@ namespace Pipeline.Classification
 {
     /// <summary>
     /// Classifies listings as cameras uses a Naive Bayes classifier.
+    ///
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/NaiveBayesCameraListingClassifier.cs
     /// </summary>
     internal class NaiveBayesCameraClassifier
     {
-        private const int MIN_NUM_ACCESSORY_WORDS = 3;
-        private const float WORD_RATIO_CONSIDER_CAMERA = 0.90F;
-
         private readonly ICollection<string> _cameraTrainingSet;
         private readonly ICollection<string> _accessoryTrainingSet;
+        private readonly int _minNumWords;
+        private readonly float _wordRatio;
         private readonly IDictionary<string, int> _cameraWordFreq;
         private readonly IDictionary<string, int> _accessoryWordFreq;
         private readonly int _totalTerms;
 
-        public NaiveBayesCameraClassifier(ICollection<string> cameraTrainingSet, ICollection<string> accessoryTrainingSet)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="cameraTrainingSet"></param>
+        /// <param name="accessoryTrainingSet"></param>
+        /// <param name="minNumWords">The minimum number of non-camera terms required to classify as non-camera.</param>
+        /// <param name="wordRatio">The ratio of camera to non-camera terms to classify as camera.</param>
+        public NaiveBayesCameraClassifier(ICollection<string> cameraTrainingSet, ICollection<string> accessoryTrainingSet, int minNumWords, float wordRatio)
         {
+            Debug.Assert(cameraTrainingSet != null, "expected cameraTrainingSet not null");
+            Debug.Assert(accessoryTrainingSet != null, "expected accessoryTrainingSet not null");
+            if (minNumWords < 0) { throw new ArgumentOutOfRangeException("minNumWords"); }
+            if (wordRatio < 0 || wordRatio > 1) { throw new ArgumentOutOfRangeException("wordRatio"); }
+
             _cameraTrainingSet = cameraTrainingSet;
             _accessoryTrainingSet = accessoryTrainingSet;
-
+            _minNumWords = minNumWords;
+            _wordRatio = wordRatio;
             _cameraWordFreq = GetWordFrequency(cameraTrainingSet);
             _accessoryWordFreq = GetWordFrequency(accessoryTrainingSet);
-
             _totalTerms = _cameraWordFreq.Values.Sum() + _accessoryWordFreq.Values.Sum();
         }
 
         public bool IsCamera(Listing listing)
         {
-            var cameraWordCount = 0;
-            var accessoryWordCount = 0;
+            Debug.Assert(listing != null, "expected listing not null");
+
+            var cameraTermCount = 0;
+            var nonCameraTermCount = 0;
             var tokens = listing.Title.TokenizeOnWhiteSpace();
             foreach (var token in tokens)
             {
                 float tokenQ = CalculateQ(token);
-
-                if (tokenQ > 1)
+                if (tokenQ > 1F)
                 {
-                    cameraWordCount += 1;
+                    cameraTermCount += 1;
                 }
-                else if (tokenQ < 1)
+                else if (tokenQ < 1F)
                 {
-                    accessoryWordCount += 1;
+                    nonCameraTermCount += 1;
                 }
+                // else neutral words are ignored
             }
 
-            var totalWords = accessoryWordCount + cameraWordCount;
+            var totalTerms = nonCameraTermCount + cameraTermCount;
             return
                 // If not enough accessory words assume it is a camera
-                (accessoryWordCount < MIN_NUM_ACCESSORY_WORDS)
+                (nonCameraTermCount < _minNumWords)
 
                 // If not enough accessory words assume it is a camera
-                || ((float)cameraWordCount / totalWords > WORD_RATIO_CONSIDER_CAMERA);
+                || ((float)cameraTermCount / totalTerms > _wordRatio);
         }
 
         private float CalculateQ(string token)
         {
             var numCameraListings = _cameraTrainingSet.Count;
             float probWordOccuringInCamera = _cameraWordFreq.ContainsKey(token) ? (float)_cameraWordFreq[token] / numCameraListings : 0F;
-            Debug.Assert(probWordOccuringInCamera <= 1.0F, "Expected probability");
+            Debug.Assert(probWordOccuringInCamera <= 1.0F, "Expected probability range [0 - 1.0]");
 
             var numAccessoryListings = _accessoryTrainingSet.Count;
             float probWordOccuringInAccessory = _accessoryWordFreq.ContainsKey(token) ? (float)_accessoryWordFreq[token] / numAccessoryListings : 0F;
-            Debug.Assert(probWordOccuringInAccessory <= 1.0F, "Expected probability");
+            Debug.Assert(probWordOccuringInAccessory <= 1.0F, "Expected probability range [0 - 1.0]");
 
             int tokenOccurances = (_cameraWordFreq.ContainsKey(token) ? _cameraWordFreq[token] : 0) + (_accessoryWordFreq.ContainsKey(token) ? _accessoryWordFreq[token] : 0);
             float probTokenOccuring = (float)tokenOccurances / _totalTerms;

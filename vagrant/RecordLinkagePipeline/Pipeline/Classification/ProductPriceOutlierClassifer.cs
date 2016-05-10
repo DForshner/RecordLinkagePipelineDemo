@@ -13,19 +13,33 @@ namespace Pipeline.Classification
     /// </summary>
     internal class ProductPriceOutlierClassifer
     {
-        private const decimal LOWER_RANGE_MULTIPLIER = 0.5M;
-        private const decimal UPPER_RANGE_MULTIPLIER = 5M;
         private const int MIN_NUM_LISTINGS = 5;
 
-        private IDictionary<string, ExchangeRate> _ratesBySource;
+        private readonly IDictionary<string, ExchangeRate> _ratesBySource;
+        private readonly decimal _lowerRangeMultiplier;
+        private readonly decimal _upperRangeMultiplier;
 
-        public ProductPriceOutlierClassifer(IEnumerable<ExchangeRate> rates)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="rates">Exchange rates</param>
+        /// <param name="lowerRangeMultipler">Multiple to increase the lower price range</param>
+        /// <param name="upperRangeMultiplier">Multiple to increase the upper price range</param>
+        public ProductPriceOutlierClassifer(IEnumerable<ExchangeRate> rates, decimal lowerRangeMultipler, decimal upperRangeMultiplier)
         {
+            Debug.Assert(rates != null, "expected rates not null");
+            if (lowerRangeMultipler < 0) { throw new ArgumentOutOfRangeException("lowPrice"); }
+            if (upperRangeMultiplier < 0) { throw new ArgumentOutOfRangeException("highPrice"); }
+
             _ratesBySource = rates.ToDictionary(x => x.SourceCurrencyCode);
+            _lowerRangeMultiplier = lowerRangeMultipler;
+            _upperRangeMultiplier = upperRangeMultiplier;
         }
 
         public IEnumerable<Tuple<Listing, bool>> ClassifyAsCamera(ProductMatch match)
         {
+            Debug.Assert(match != null, "expected match not null");
+
             if (match.Listings.Count < MIN_NUM_LISTINGS)
             {
                 // Not enough points to determine what typical range of prices looks like so assume all are cameras
@@ -41,10 +55,11 @@ namespace Pipeline.Classification
                 .ToList()
                 .InterquartileStrongOutlierRange();
 
-            // Some of the cameras that come are parts of kits are many times more
+            var min = (originalRange.Item1 > 0 ? originalRange.Item1 : 0) * _lowerRangeMultiplier;
+
+            // Some of the listings are for cameras that come as kits are many times more
             // expensive than the camera alone so we need to raise the upper limit.
-            var min = (originalRange.Item1 > 0 ? originalRange.Item1 : 0) * LOWER_RANGE_MULTIPLIER;
-            var max = originalRange.Item2 * UPPER_RANGE_MULTIPLIER;
+            var max = originalRange.Item2 * _upperRangeMultiplier;
 
             var classifiedListings = withNormalizedPrices
                 .Select(x => Tuple.Create(x.Listing, (x.NormalizedPrice >= min && x.NormalizedPrice <= max)));
