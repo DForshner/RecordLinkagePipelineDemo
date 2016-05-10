@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
-using Pipeline.Shared;
-using Pipeline.Infrastructure;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Pipeline.Infrastructure;
+using Pipeline.Shared;
 
 namespace Pipeline.Matching
 {

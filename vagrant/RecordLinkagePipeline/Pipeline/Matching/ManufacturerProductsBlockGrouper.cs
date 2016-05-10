@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using Pipeline.Shared;
 using System.Linq;
+using Pipeline.Shared;
 
 namespace Pipeline.Matching
 {
