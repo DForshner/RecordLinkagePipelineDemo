@@ -34,14 +34,10 @@ namespace Pipeline
             // TODO: We could pass dependencies in via constructor injection if we wanted to unit test the pipeline.
             var config = ConfigParser.Parse(configLine);
             _productBlockGrouper = new ManufacturerProductsBlockGrouper();
-            //_aliases = new SimilarityAliasGenerator(33, 0.50F, 0.90F);
             _aliases = new SimilarityAliasGenerator(config.ManufacturerNameCutoff, config.PossibleAliasPercentile, config.CommonWordPercentile);
             _productMatcher = new ProductModelMatcher();
-            //_naiveBayesClassifier = new NaiveBayesCameraClassifier(cameraTrainingSet.ToList(), accessoryTrainingSet.ToList(), 3, 0.90F);
             _naiveBayesClassifier = new NaiveBayesCameraClassifier(cameraTrainingSet.ToList(), accessoryTrainingSet.ToList(), config.MinNumWords, config.WordRatio);
-            //_heuristicClassifier = new HeuristicClassifier(_erates, 60M, 700M, 50F);
             _heuristicClassifier = new HeuristicClassifier(_erates, config.LowPriceCutoff, config.HighPriceCutoff, config.Threshold);
-            //_priceClassifier = new ProductPriceOutlierClassifer(_erates, 0.5M, 5M);
             _priceClassifier = new ProductPriceOutlierClassifer(_erates, config.LowerRangeMultiplier, config.UpperRangeMultiplier);
         }
 
