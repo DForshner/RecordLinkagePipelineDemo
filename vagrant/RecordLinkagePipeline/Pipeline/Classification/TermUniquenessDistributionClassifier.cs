@@ -6,18 +6,24 @@ using Pipeline.Shared;
 namespace Pipeline.Classification
 {
     /// <summary>
-    /// Tries to determine if listing is an accessory based on the distribution of its term probabilities.
+    /// Note: I couldn't get this classifier to work reliably so it's only included for reference.  I think the basic idea is sound and given more time I could probably get it working.
     ///
-    /// The idea is to identify listings for accessories for multiple models by looking for listings with 'many" unique terms present.
+    /// Classifies a listing using the distribution of its term probabilities. The idea is to identify listings that are an accessory for multiple models by looking for listings with a high proportion of unique terms.
     /// Ex: nikon 85mm f 3 5 g vr af s dx ed micro nikkor lens uv filter accessory kit for nikon d300s d300 d40 d60 d5000 d7000 d90 d3000 d3100 digital slr cameras
-    ///
     /// Assuming a typical camera listing with one model number only has a few unique terms it should be possible to look a histogram of term probabilities and spot the accessory listings.
     ///
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/ClassifyingDocumentsUsingDistributionOfTermUniqueness.cs
     /// </summary>
     internal class TermUniquenessDistributionClassifier
     {
+        /// <summary>
+        /// Number of histogram buckets to assign term probabilities to.
+        /// </summary>
         private const int NUM_BUCKETS = 15;
+
+        /// <summary>
+        /// The ratio of the center of mass to the range of buckets that have values.
+        /// </summary>
         private const double CLASSIFICATION_RATIO = 0.33D;
 
         private static IList<double> _axisValues = GenerateHistogramAxis();
@@ -60,10 +66,11 @@ namespace Pipeline.Classification
         private static bool IsCamera(IList<int> histogram)
         {
             var maxFilled = histogram.LastIndexWhere(x => x > 0);
-            if (maxFilled < 2)
+
+            const int MIN_NUM_BUCKETS = 2;
+            if (maxFilled < MIN_NUM_BUCKETS)
             {
-                // Less than two buckets filled in histogram so can't
-                // find the center of mass.
+                // Not enough buckets filled to get a good classification.
                 return true;
             }
 
