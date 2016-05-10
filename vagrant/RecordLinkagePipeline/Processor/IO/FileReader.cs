@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
+using Pipeline.Shared;
 
 namespace Processor.IO
 {
-    public class FileReader
+    public class FileReader : ITextReader
     {
         public IEnumerable<string> ReadLines(string fileName, int? limit = null)
         {
