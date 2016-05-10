@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
@@ -6,24 +8,17 @@ using Pipeline.Shared;
 namespace Pipeline.Classification
 {
     /// <summary>
-    /// Examine each listing and try to classify it as a camera using deterministic heuristics.
+    /// Try to classify a listing as a camera using heuristics.
     ///
-    /// Everything here was found by trial and error for the given dataset so this
-    /// approach isn't going to scale gracefully as listings in new languages are added.
+    /// Everything here was found by trial and error for the given dataset so I don't think
+    /// approach is going to scale gracefully as listings in new languages are added.
     /// </summary>
     internal class HeuristicClassifier
     {
         private static HashSet<string> _wordsAssociatedWithAccessoryListings = new[]
         {
-            "bag",
-            "body",
             "battery",
-            "only",
-
-            // Look for phrase "for {manufacturer name}" and "for {model}"
-            "for",
-            "für",
-            "pour"
+            "capacity",
         }.ToHashSet();
 
         private static HashSet<string> _wordsAssociatedWithCameraListings = new[]
@@ -39,70 +34,167 @@ namespace Pipeline.Classification
             "stabilized",
             "digitalkamera",
             "digital",
-
-            // Look for phrase "camera with {feature}"
-            "with",
-            "livré avec"
+            "camera",
         }.ToHashSet();
 
-        public bool ClassifyAsCamera(Listing listing)
+        private static HashSet<string> _forWords = new string[]
         {
-            // Approach 1 - Examine listing price
+            "for", // "for {model}"
+            "für", // "für coolpix",
+            "pour" //  "pour lumix"
+        }.ToHashSet();
 
-            // TODO: Normalize price?
-            // Score low prices (probability accessories) in proportion to how near zero they are.
-            const int LOW_COST = 80;
-            var lowCostScore = (listing.Price < LOW_COST)
-                // Score is power of 2 to how near zero the price is
-                ? -100 * (LOW_COST - (listing.Price * listing.Price) / LOW_COST) / LOW_COST
-                : 0;
+        private const int CAMERA_SCORE = 100;
+        private const int NO_DECISION_SCORE = 50;
+        private const int NON_CAMERA_SCORE = 0;
 
-            // Approach 2 - Examine words in title.
+        private readonly IDictionary<string, ExchangeRate> _ratesBySource;
+        private readonly decimal _lowPriceCutoff;
+        private readonly decimal _highPriceCutoff;
+        private readonly float _isCameraThreshold;
 
-            // Look for words typically associated with accessories
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="rates">Exchange rates</param>
+        /// <param name="lowPrice">Treat listings with prices under this value as probably an accessory. Units: CAD $</param>
+        /// <param name="highPrice">Treat listings with prices over this value as probably a camera. Units: CAD $</param>
+        /// <param name="threshold">Score over which a listing should be classified as a camera. Range: [0-100]</param>
+        public HeuristicClassifier(IEnumerable<ExchangeRate> rates, decimal lowPrice, decimal highPrice, float threshold)
+        {
+            Debug.Assert(rates != null, "expected rates not null");
+            if (lowPrice < 0) { throw new ArgumentOutOfRangeException("lowPrice"); }
+            if (highPrice < 0) { throw new ArgumentOutOfRangeException("highPrice"); }
+            if (threshold < 0 || threshold > 100) { throw new ArgumentOutOfRangeException("threshold"); }
+
+            _ratesBySource = rates.ToDictionary(x => x.SourceCurrencyCode);
+            _lowPriceCutoff = lowPrice;
+            _highPriceCutoff = highPrice;
+            _isCameraThreshold = threshold;
+        }
+
+        public bool IsCamera(Listing listing)
+        {
+            Debug.Assert(listing != null, "expected listing not null");
+
+            // Heuristic 1 - low listing prices are probably accessories and high are probably cameras
+            var priceScore = ScorePriceListing(listing);
+
+            // Heuristic 2 - Examine words in title.
             var titleTokens = listing.Title.TokenizeOnWhiteSpace();
-            const int NON_CAMERA_WORD_WEIGHT = -20;
-            var accessoryWordsScore = _wordsAssociatedWithAccessoryListings
-                .Where(x => titleTokens.Contains(x))
-                .Select(x => NON_CAMERA_WORD_WEIGHT)
-                .Sum();
+            var accessoryWordsScore = ScoreWordsAssociatedWithNonCameraListings(titleTokens);
+            var cameraWordsScore = ScoreWordsAssociatedWithCamera(titleTokens);
 
-            // Look for words typically associated with camera listings
+            // Heuristic 3 - Examine listing sentence structure
+            var phraseCameraWithFeatureScore = ScorePhraseCameraWithFeature(titleTokens);
+            var phraseAccessoryForCameraScore = ScorePhraseForManufacturerOrModel(titleTokens);
+
+            // Combine individual [0-100] scores together into a final score.
+            var isCameraScore =
+                + priceScore * 0.20F
+                + accessoryWordsScore * 0.25F
+                + cameraWordsScore * 0.25F
+                + phraseCameraWithFeatureScore * 0.15F
+                + phraseAccessoryForCameraScore * 0.15F;
+
+            Debug.Assert(isCameraScore >= 0 && isCameraScore <= 100, "Expected [0-100] range.");
+
+            return isCameraScore >= _isCameraThreshold;
+        }
+
+        /// <summary>
+        /// Score low prices (probability batteries, accessories, etc.) in proportion to how low the price is.
+        ///
+        /// 100 |                        +----------
+        /// 75  |                        |
+        /// 50  |        +{--------------|
+        /// 25  |     /
+        /// 5   | /
+        /// 0   +--------LOW------------HIGH--------
+        /// </summary>
+        /// <returns>Score [0 - 100]</returns>
+        private int ScorePriceListing(Listing listing)
+        {
+            var normalizedPrice = GetPriceInCAD(listing);
+
+            if (normalizedPrice > _highPriceCutoff)
+            {
+                return CAMERA_SCORE; // camera
+            }
+            else if (normalizedPrice > _lowPriceCutoff)
+            {
+                return NO_DECISION_SCORE; // neutral
+            }
+            else
+            {
+                // accessory
+                var ratio = ((normalizedPrice * normalizedPrice) / _lowPriceCutoff) / _lowPriceCutoff;
+                return (int)(50M * ratio);
+            }
+        }
+
+        // TODO: Duplicated in product price outlier classifier
+        private decimal GetPriceInCAD(Listing listing)
+        {
+            if (listing.CurrencyCode == null || !_ratesBySource.ContainsKey(listing.CurrencyCode))
+            {
+                Debug.WriteLine("No exchange rate for source currency {0}", listing.CurrencyCode);
+                return listing.Price;
+            }
+
+            return _ratesBySource[listing.CurrencyCode].Rate * listing.Price;
+        }
+
+        /// <summary>
+        /// Look for words typically associated with accessories
+        /// </summary>
+        /// <returns>Score [0 - 100]</returns>
+        private static int ScoreWordsAssociatedWithNonCameraListings(string[] titleTokens)
+        {
+            var accessoryWords = _wordsAssociatedWithAccessoryListings
+                .Where(x => titleTokens.Contains(x))
+                .Count();
+            const int NON_CAMERA_WORD_WEIGHT = 20;
+            var score = 50 - (NON_CAMERA_WORD_WEIGHT * accessoryWords) / _wordsAssociatedWithAccessoryListings.Count;
+            return Math.Max(score, NON_CAMERA_SCORE);
+        }
+
+        /// <summary>
+        /// Look for words typically associated with camera listings
+        /// </summary>
+        /// <returns>Score [0 - 100]</returns>
+        private static int ScoreWordsAssociatedWithCamera(string[] titleTokens)
+        {
+            var cameraWords = _wordsAssociatedWithCameraListings
+                .Where(x => titleTokens.Contains(x))
+                .Count();
             const int CAMERA_WORD_WEIGHT = 20;
-            var cameraWordsScore = _wordsAssociatedWithCameraListings
-                .Where(x => titleTokens.Contains(x))
-                .Select(x => CAMERA_WORD_WEIGHT)
-                .Sum();
+            var score = 50 + (CAMERA_WORD_WEIGHT * cameraWords);
+            return Math.Min(score, CAMERA_SCORE);
+        }
 
-            // Approach 3 - Examine sentence structure
-
-            // Look for phrase "camera with {feature}"
-            // TODO: Handle other languages. Ex: "Livré avec chargeur"
+        /// <summary>
+        /// Look for phrase "camera with {feature}"
+        /// TODO: Handle other languages. Ex: "Livré avec chargeur"
+        /// </summary>
+        /// <returns>Score [0 - 100]</returns>
+        private static int ScorePhraseCameraWithFeature(string[] titleTokens)
+        {
+            // phrase "camera with {feature}"
             var withWordIdx = titleTokens.LastIndexWhere(x => x == "with");
-            var precededByCameraWord = (withWordIdx > 0 && titleTokens[withWordIdx - 1] == "camera");
-            var phraseCameraWithFeatureScore = (withWordIdx > 0 && precededByCameraWord) ? 100 : 0;
+            var IsPrecededByCamera = (withWordIdx > 0 && titleTokens[withWordIdx - 1] == "camera");
 
-            // Look for phrase "for {manufacturer name}" and "for {model}"
-            // TODO: Handle other languages. Ex: "für coolpix", "pour lumix"
-            // TODO: Check following word is a manufacturer name or product model
-            var forWordIdx = titleTokens.LastIndexWhere(x => x == "for");
-            var praseAccessoryForCameraScore = (forWordIdx > 0) ? -100 : 0;
+            return (withWordIdx > 0 && IsPrecededByCamera) ? CAMERA_SCORE : NO_DECISION_SCORE;
+        }
 
-            // Look for phrase "for {manufacturer/model}" with {feature}"
-            // TODO: Check following word is a manufacturer name or product model
-            var phraseAccessoryForCameraWithScore = (forWordIdx > 0 && withWordIdx > 0 && forWordIdx < withWordIdx) ? -100 : 0;
-
-            // Combine scores together to produce a final score.
-            var isCameraScore = 100
-                + lowCostScore / 6
-                + accessoryWordsScore / 6
-                + cameraWordsScore / 6
-                + phraseCameraWithFeatureScore / 6
-                + praseAccessoryForCameraScore / 6
-                + phraseAccessoryForCameraWithScore / 6;
-
-            const int IS_CAMERA_THRESHOLD = 90;
-            return isCameraScore > IS_CAMERA_THRESHOLD;
+        /// <summary>
+        /// Look for phrase "for {manufacturer name}" and "for {model}"
+        /// TODO: Could check that the following word is a manufacturer name or product mode
+        /// </summary>
+        /// <returns>Score [0 - 100]</returns>>
+        private static int ScorePhraseForManufacturerOrModel(string[] titleTokens)
+        {
+            return (_forWords.Any(x => titleTokens.Contains(x))) ? NON_CAMERA_SCORE : NO_DECISION_SCORE;
         }
     }
 }
