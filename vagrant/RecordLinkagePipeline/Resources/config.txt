@@ -1,0 +1,12 @@
+{
+	"manufacturer_name_cutoff": 33,
+	"possible_alias_percentile": 0.50,
+	"common_word_percentile": 0.90,
+	"min_num_words": 3,
+	"word_ratio": 0.90,
+	"low_price_cutoff": 60,
+	"high_price_cutoff": 700,
+	"threshold": 50.0,
+	"lower_range_multiplier": 0.5,
+	"upper_range_multiplier": 5.0
+}
