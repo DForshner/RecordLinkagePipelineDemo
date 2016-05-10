@@ -13,15 +13,5 @@ namespace Pipeline.Shared
         public Decimal Price { get; set; }
 
         public string Original { get; set; }
-
-        public override string ToString()
-        {
-            return "{"
-                + "Manufacturer: " + Manufacturer + ","
-                + "Title: " + Title + ","
-                + "CurrencyCode: " + CurrencyCode + ","
-                + "Price: " + Price.ToString() + ","
-                + "}";
-        }
     }
 }
