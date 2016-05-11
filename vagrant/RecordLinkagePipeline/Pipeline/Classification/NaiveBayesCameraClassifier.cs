@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Pipeline.Domain;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
 namespace Pipeline.Classification
 {
     /// <summary>
-    /// Classifies listings as cameras uses a Naive Bayes classifier.
+    /// Classifies listings as cameras using a Naive Bayes classifier.
     ///
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/NaiveBayesCameraListingClassifier.cs
     /// </summary>
