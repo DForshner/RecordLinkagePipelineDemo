@@ -1,7 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pipeline.Extraction;
+using Pipeline.Infrastructure;
 
-namespace Pipeline.UnitTests.Extraction
+namespace Pipeline.UnitTests.Infrastructure
 {
     [TestClass]
     public class FieldMungerTests
