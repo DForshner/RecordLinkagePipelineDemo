@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using Pipeline.Domain;
+using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
 namespace Pipeline.Extraction
