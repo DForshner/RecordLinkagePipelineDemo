@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Pipeline.Domain;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
 namespace Pipeline.Classification
 {
     /// <summary>
-    /// Try to classify a listing as a camera using heuristics.
+    /// Classifies a listing as a camera using heuristics.
     ///
     /// Everything here was found by trial and error for the given dataset so I don't think
     /// approach is going to scale gracefully as listings in new languages are added.

@@ -2,14 +2,16 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Pipeline.Domain;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
 namespace Pipeline.Classification
 {
     /// <summary>
-    /// The same product model should have somewhat similar prices.
-    /// Compares all listings for a particular model and remove any outliers.
+    /// Classifies a set of listing for the same product as cameras.
+    ///
+    /// The same model should have somewhat similar prices so compare all listings and remove any outliers.
     /// </summary>
     internal class ProductPriceOutlierClassifer
     {
