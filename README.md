@@ -1,6 +1,8 @@
 # RecordLinkagePipelineDemo
 Exploring linking records from disparate data sources
 
+![Screenshot](/Pipeline.png)
+
 ### Building and running the pipeline
 1. [Local] Start the vagrant instance with "vagrant up".
 2. [Local] Login to the vagrant instance with "vagrant ssh".
