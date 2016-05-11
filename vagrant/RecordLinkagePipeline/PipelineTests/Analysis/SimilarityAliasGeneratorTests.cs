@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pipeline.Analysis;
+using Pipeline.Domain;
 using Pipeline.Shared;
 
 namespace Pipeline.UnitTests.Analysis
@@ -19,7 +20,7 @@ namespace Pipeline.UnitTests.Analysis
             {
                 new Listing { Manufacturer = "acme corp", Title = "camera zoom model5" }
             };
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
+            var termProbablities = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);
 
             var result = CreateSut().Generate(products, listings, termProbablities).Single();
 
@@ -40,7 +41,7 @@ namespace Pipeline.UnitTests.Analysis
                 new Listing { Manufacturer = "acme inc", Title = "camera zoom dxc 5" },
                 new Listing { Manufacturer = "acme ltd", Title = "camera zoom model3" }
             };
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
+            var termProbablities = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);
 
             var result = CreateSut().Generate(products, listings, termProbablities).Single();
 
@@ -61,7 +62,7 @@ namespace Pipeline.UnitTests.Analysis
                 new Listing { Manufacturer = "acme inc", Title = "camera zoom 20x zoom" },
                 new Listing { Manufacturer = "acme ltd", Title = "camera zoom" }
             };
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
+            var termProbablities = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);
 
             var results = CreateSut().Generate(products, listings, termProbablities);
 

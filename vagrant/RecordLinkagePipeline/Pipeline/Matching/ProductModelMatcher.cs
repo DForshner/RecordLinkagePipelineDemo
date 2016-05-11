@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Pipeline.Domain;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
@@ -23,10 +24,10 @@ namespace Pipeline.Matching
             foreach(var product in productBlock.Products)
             {
                 var modelTokens = product.Model.TokenizeOnWhiteSpace();
-                var modelNGrams = modelTokens.CreateNGrams(1, Math.Max(modelTokens.Length, 3)).ToList();
+                var modelNGrams = modelTokens.CreateNShingles(1, Math.Max(modelTokens.Length, 3)).ToList();
 
                 var familyTokens = !String.IsNullOrEmpty(product.Family) ? product.Family.TokenizeOnWhiteSpace() : new string[0];
-                var familyNGrams = familyTokens.CreateNGrams(1, Math.Max(modelTokens.Length, 3)).ToList();
+                var familyNGrams = familyTokens.CreateNShingles(1, Math.Max(modelTokens.Length, 3)).ToList();
 
                 products.Add(Tuple.Create(product, modelNGrams, familyNGrams));
             }
@@ -35,7 +36,7 @@ namespace Pipeline.Matching
             foreach(var listing in listingBlock.Listings)
             {
                 var tokens = listing.Title.TokenizeOnWhiteSpace();
-                var ngrams = tokens.CreateNGrams(1, Math.Min(tokens.Length, 3)).ToList();
+                var ngrams = tokens.CreateNShingles(1, Math.Min(tokens.Length, 3)).ToList();
 
                 ngrams.ForEach(x => AddOrIncrement(tokenCount, x));
 

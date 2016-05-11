@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pipeline.Analysis;
-using Pipeline.Extraction;
+using Pipeline.Domain;
+using Pipeline.Infrastructure;
 using Pipeline.Matching;
 using Pipeline.Shared;
 
@@ -51,7 +51,6 @@ namespace Pipeline.UnitTests.Matching
                 new Listing { Title = matchingListingTitle }
             });
             var productBlock = MakeProductBlock(new[] { MakeProduct("pdr m60") });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
@@ -104,7 +103,6 @@ namespace Pipeline.UnitTests.Matching
             var productBlock = MakeProductBlock(new[] {
                 MakeProduct("dmc-fx70")
             });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
@@ -126,8 +124,6 @@ namespace Pipeline.UnitTests.Matching
             {
                 MakeProduct("DSC-TX1", "Cyber-shot")
             });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
-
             var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
             Assert.AreEqual(1, results.Listings.Count);
@@ -148,7 +144,6 @@ namespace Pipeline.UnitTests.Matching
                 MakeListing("HP PhotoSmart 850 4MP Digital Camera w/ 8x Optical Zoom")
             });
             var productBlock = MakeProductBlock(new[] { MakeProduct("DSLR-A850") });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1.Single();
 
@@ -174,7 +169,6 @@ namespace Pipeline.UnitTests.Matching
                 MakeProduct("105", "IXUS"),
                 MakeProduct("T1i", "Rebel")
             });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
 
             var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1;
             var ixusResults = results.Single(x => x.Product.Family == "ixus");
@@ -197,8 +191,9 @@ namespace Pipeline.UnitTests.Matching
                 MakeListing("canon powershot a640 10mp digital camera with 4x optical zoom"),
             });
             var productBlock = MakeProductBlock(new[] { MakeProduct("600", "powershot") });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
+
             var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1;
+
             Assert.AreEqual(0, results.Count());
         }
 
@@ -240,8 +235,9 @@ namespace Pipeline.UnitTests.Matching
             {
                 MakeProduct("pen e pl2")
             });
-            var termProbablities = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listingBlock.Listings);
+
             var results = GetSut().FindProductMatches(listingBlock, productBlock).Item1;
+
             Assert.AreEqual(0, results.Count());
         }
 

@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pipeline.Analysis;
 using Pipeline.Classification;
+using Pipeline.Domain;
 using Pipeline.Shared;
 
 namespace Pipeline.UnitTests.Classification
@@ -28,7 +29,7 @@ namespace Pipeline.UnitTests.Classification
                 new Listing { Title = "green bag" },
                 new Listing { Title = "lens for model7 model6 model5" },
             };
-            var probablityPerToken = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
+            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);
 
             var result = new TermUniquenessDistributionClassifier().ClassifyAsCamera(probablityPerToken, camera);
 
@@ -53,23 +54,11 @@ namespace Pipeline.UnitTests.Classification
                 new Listing { Title = "lens for model7 model6 model5" },
                 accessory
             };
-            var probablityPerToken = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
+            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);;
 
             var result = new TermUniquenessDistributionClassifier().ClassifyAsCamera(probablityPerToken, accessory);
 
             Assert.IsFalse(result);
-        }
-
-        [TestMethod]
-        public void WhenBattery_ExpectNotCamera()
-        {
-            var listings = new[]
-            {
-                new Listing { Title = "Energizer No. CHM39 - Battery charger 4xAA/AAA, 1x9V - included batteries: 4 x AA NiMH 1850 mAh", CurrencyCode = "gbp", Price = 32.01M },
-            };
-            //var probablityPerToken = TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(listings);
-            //var result = new TermUniquenessDistributionPruner().ClassifyAsCamera(probablityPerToken, accessory);
-            //Assert.IsFalse(result);
         }
     }
 }

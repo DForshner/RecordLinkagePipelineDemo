@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Pipeline.Analysis;
 using Pipeline.Classification;
+using Pipeline.Domain;
 using Pipeline.Extraction;
+using Pipeline.Infrastructure;
 using Pipeline.Matching;
+using Pipeline.Output;
 using Pipeline.Shared;
 
 namespace Pipeline
@@ -26,8 +29,6 @@ namespace Pipeline
 
         public ListingsToProductResolutionPipeline(Action<string> log, string configLine, IEnumerable<string> erateLines, IEnumerable<string> cameraTrainingSet, IEnumerable<string> accessoryTrainingSet)
         {
-            log("Constructing pipeline");
-
             _log = log;
             _erates = erateLines.Select(ExchangeRateParser.Parse).ToList();
 
@@ -41,29 +42,23 @@ namespace Pipeline
             _priceClassifier = new ProductPriceOutlierClassifer(_erates, config.LowerRangeMultiplier, config.UpperRangeMultiplier);
         }
 
-        public IEnumerable<ProductMatch> FindMatches(IEnumerable<string> productLines, IEnumerable<string> listingLines)
+        public IEnumerable<ProductMatchDto> FindMatches(IEnumerable<string> productLines, IEnumerable<string> listingLines)
         {
-            var products = Task.Run(() => ParseOrLogException(productLines, ProductParser.Parse).ToList());
-            var listings = Task.Run(() => ParseOrLogException(listingLines, ListingParser.Parse).ToList());
+            // TODO: Should be able to load files and parse as async tasks but ran into a bug when running mono on Ubuntu.  Something related to FileReader.Peek() blocking the thread and never resuming.
+            var products = ParseOrLogException(productLines, ProductParser.Parse).ToList();
+            var listings = ParseOrLogException(listingLines, ListingParser.Parse).ToList();
 
-            var canonicalManufacturerNames = products
-                .ContinueWith(x => new CanonicalManufacturerNameGenerator().Generate(x.Result));
+            var canonicalManufacturerNames = products.Select(x => x.Manufacturer).ToHashSet();
 
-            var probablityPerToken = listings
-                .ContinueWith(x => TokenProbablityPerListingCalculator.GenerateTokenProbabilitiesPerListing(x.Result));
+            var productBlocks = BlockProductsByManufacturer(products, canonicalManufacturerNames);
 
-            var listingBlocks = Task.WhenAll(products, listings, canonicalManufacturerNames, probablityPerToken)
-                .ContinueWith((x) => BlockListingsByManufacturer(products.Result, listings.Result, canonicalManufacturerNames.Result, probablityPerToken.Result));
+            var listingBlocks = BlockListingsByManufacturer(products, listings, canonicalManufacturerNames);
 
-            var productBlocks = Task.WhenAll(products, canonicalManufacturerNames)
-                .ContinueWith((x) => BlockProductsByManufacturer(products.Result, canonicalManufacturerNames.Result));
+            var possibleMatches = MatchListingsToProduct(listingBlocks, productBlocks);
 
-            var possibleMatches = Task.WhenAll(listingBlocks, productBlocks)
-                .ContinueWith((x) => MatchProductsToListings(listingBlocks.Result, productBlocks.Result).ToList());
+            var matches = PruneMatches(possibleMatches);
 
-            var matches = PruneMatches(probablityPerToken.Result, possibleMatches.Result, _erates).ToList();
-
-            return matches;
+            return ProductMatchDtoMapper.Map(matches).ToList();
         }
 
         private IEnumerable<T> ParseOrLogException<T>(IEnumerable<string> lines, Func<string, T> parse) where T : class
@@ -94,11 +89,12 @@ namespace Pipeline
             return _productBlockGrouper.Match(products, canonicalManufacturerNames);
         }
 
-        private IEnumerable<ManufacturerNameListingsBlock> BlockListingsByManufacturer(ICollection<Product> products, ICollection<Listing> listings, HashSet<string> canonicalManufacturerNames, IDictionary<string, float> tokenProbablities)
+        private IEnumerable<ManufacturerNameListingsBlock> BlockListingsByManufacturer(ICollection<Product> products, ICollection<Listing> listings, HashSet<string> canonicalManufacturerNames)
         {
             _log("Blocking listings by manufacturer name");
 
-            var aliases = _aliases.Generate(products, listings, tokenProbablities);
+            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);
+            var aliases = _aliases.Generate(products, listings, probablityPerToken);
             var listingBlockGrouper = new ManufacturerListingsBlockGrouper(canonicalManufacturerNames, aliases);
             var listingBlocks = listingBlockGrouper.Match(listings);
 
@@ -107,40 +103,48 @@ namespace Pipeline
             return listingBlocks.Item1;
         }
 
-        private IEnumerable<ProductMatch> MatchProductsToListings(
-            IEnumerable<ManufacturerNameListingsBlock> listingBlocks, IEnumerable<ManufacturerNameProductsBlock> productBlocks)
+        private IEnumerable<ProductMatch> MatchListingsToProduct(IEnumerable<ManufacturerNameListingsBlock> listingBlocks, IEnumerable<ManufacturerNameProductsBlock> productBlocks)
         {
             _log("Matching listings to products");
 
             var productBlocksByManufacturerName = productBlocks.ToDictionary(x => x.ManufacturerName);
-            foreach (var listingBlock in listingBlocks)
+            var toMatch = listingBlocks
+                .Select(x => new { Listings = x, Products = productBlocksByManufacturerName.ContainsKey(x.ManufacturerName) ? productBlocksByManufacturerName[x.ManufacturerName] : null })
+                .ToList();
+
+            foreach(var pairs in toMatch.Where(x => x.Products == null))
             {
-                _log(String.Format("Matching listings to products for {0}", listingBlock.ManufacturerName));
+                LogUnmatchedListings(pairs.Listings.Listings);
+            }
 
-                if (!productBlocksByManufacturerName.ContainsKey(listingBlock.ManufacturerName))
+            var combinedMatches = new ConcurrentBag<ProductMatch>();
+            toMatch.Where(x => x.Products != null)
+                .AsParallel() // PERF: Matching pairs of products and listings in parallel gives this method a ~3x speedup
+                .ForAll(x =>
                 {
-                    foreach (var unmatched in listingBlock.Listings) { _log(String.Format("Failed to match listings to product: {0}, {1}", unmatched.Manufacturer, unmatched.Title)); }
-                    continue; // No products for this manufacturer
-                }
+                    var matches = _productMatcher.FindProductMatches(x.Listings, x.Products);
 
-                var productBlock = productBlocksByManufacturerName[listingBlock.ManufacturerName];
-                var matches = _productMatcher.FindProductMatches(listingBlock, productBlock);
+                    LogUnmatchedListings(matches.Item2);
 
-                foreach (var unmatched in matches.Item2) { _log(String.Format("Failed to match listings to product: {0}, {1}", unmatched.Manufacturer, unmatched.Title)); }
+                    foreach (var match in matches.Item1) { combinedMatches.Add(match); }
+                });
+            return combinedMatches;
+        }
 
-                foreach(var match in matches.Item1)
-                {
-                    yield return match;
-                }
+        private void LogUnmatchedListings(IEnumerable<Listing> unmatched)
+        {
+            foreach (var listing in unmatched)
+            {
+                _log(String.Format("Failed to match listings to product: {0}, {1}", listing.Manufacturer, listing.Title));
             }
         }
 
         /// <summary>
         /// Remove non camera listings (accessories, batteries etc.) from product matches
         /// </summary>
-        private IEnumerable<ProductMatch> PruneMatches(IDictionary<string, float> probablityPerToken, IEnumerable<ProductMatch> possibleMatches, IEnumerable<ExchangeRate> erates)
+        private IEnumerable<ProductMatch> PruneMatches(IEnumerable<ProductMatch> possibleMatches)
         {
-            _log("Pruning matches");
+            _log(String.Format("Pruning {0} matches", possibleMatches.Count()));
 
             foreach(var match in possibleMatches)
             {
@@ -163,10 +167,10 @@ namespace Pipeline
                 .Select(x => new { Listing = x, IsCamera = _naiveBayesClassifier.IsCamera(x) })
                 .ToList();
 
-            withClassification
-                .Where(x => !x.IsCamera)
-                .ToList()
-                .ForEach(x => _log(String.Format("Pruned by Naive Bayes: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode)));
+            foreach(var x in withClassification.Where(x => !x.IsCamera))
+            {
+                _log(String.Format("Pruned by Naive Bayes: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
+            }
 
             var cameras = withClassification
                 .Where(x => x.IsCamera)
@@ -181,10 +185,10 @@ namespace Pipeline
                 .Select(x => new { Listing = x, IsCamera = _heuristicClassifier.IsCamera(x) })
                 .ToList();
 
-            withClassification
-                .Where(x => !x.IsCamera)
-                .ToList()
-                .ForEach(x => _log(String.Format("Pruned by heuristic: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode)));
+            foreach(var x in withClassification.Where(x => !x.IsCamera))
+            {
+                _log(String.Format("Pruned by heuristic: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
+            }
 
             var cameras = withClassification
                 .Where(x => x.IsCamera)
@@ -199,10 +203,10 @@ namespace Pipeline
                 .Select(x => new { Listing = x.Item1, IsCamera = x.Item2 })
                 .ToList();
 
-            withClassification
-                .Where(x => !x.IsCamera)
-                .ToList()
-                .ForEach(x => _log(String.Format("Pruned by price outlier: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode)));
+            foreach(var x in withClassification.Where(x => !x.IsCamera))
+            {
+                _log(String.Format("Pruned by price outlier: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
+            }
 
             var cameras = withClassification
                 .Where(x => x.IsCamera)

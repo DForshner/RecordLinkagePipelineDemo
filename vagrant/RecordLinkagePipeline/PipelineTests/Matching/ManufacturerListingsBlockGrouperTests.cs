@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pipeline.Analysis;
+using Pipeline.Domain;
 using Pipeline.Matching;
 using Pipeline.Shared;
 

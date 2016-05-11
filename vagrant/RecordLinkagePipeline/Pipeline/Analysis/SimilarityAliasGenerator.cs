@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
+using Pipeline.Domain;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
@@ -11,6 +11,12 @@ namespace Pipeline.Analysis
 {
     /// <summary>
     /// Finds listings for similar manufacturer names and models to generate a list of aliases for manufacturers.
+    /// Example: Many listings have a manufacturer of "fuji" but the products are listed under "fujifilm"
+    ///
+    /// For each product search for listings that have the product model in their title.  When a listing matches keep track the listing's manufacturer as
+    /// a possible alias for the product's manufacturer.  The more instances that match the more confident we can be that the alias is true.
+    ///
+    /// TODO: This is going to get rather expensive on larger data sets.  We could probably get usable results doing this on a random sample basis.
     ///
     /// Prototype: https://github.com/DForshner/CSharpExperiments/blob/master/AliasGenerationBySimilarManufacturerAndModel.cs
     /// </summary>
@@ -67,83 +73,60 @@ namespace Pipeline.Analysis
             Debug.Assert(tokenProbablities != null, "expected tokenProbablities not null");
 
             var commonTokens = GetCommonTokens(tokenProbablities);
-            var modelShinglesByModelName = Task.Run(() => GenerateModelNameShingles(commonTokens, products));
-            var manuNameNGramsByCanonicalManuName = Task.Run(() => GenerateManufacturerNameNGrams(products));
+            var modelShinglesByModelName = GenerateModelShingles(commonTokens, products);
+            var manuNameNGramsByCanonicalManuName = GenerateManufacturerNameNGrams(products);
 
-            // For each listing check all product records for a the best possible match
+            // For each listing check all products for the best possible match
             var possibleAliasesByCanonical = new ConcurrentDictionary<PossibleAlias, float>();
             listings
-                .AsParallel()
+                .AsParallel() // PERF: Process each listing in parallel
                 .ForAll(listing =>
                 {
-                    PossibleAlias bestMatch = null;
-                    var bestModelMatchScore = float.MaxValue;
+                    var listingTitleTokens = new HashSet<string>(listing.Title.TokenizeOnWhiteSpace());
 
+                    PossibleAlias bestMatch = null;
+                    var bestScore = float.MaxValue;
                     foreach (var product in products)
                     {
-                        // 1) Check that the listing and product manufacturer names are similar
-                        var manuNameMatchScore = CompareManufacturerNameSimilarity(manuNameNGramsByCanonicalManuName.Result, listing.Manufacturer, product.Manufacturer);
-
-                        // Want "fuji" to be an alias for "fujifilm"
-                        if (manuNameMatchScore < _manufacturerNameCutoff)
-                            continue; // Names are too different
+                        // 1) Check that the listing and product manufacturer names are similar but not identical
+                        // Ex: "fuji" is somewhat similar to "fujifilm"
+                        var manuNameMatchScore = ScoreManufacturerNameSimilarity(product.Manufacturer, listing.Manufacturer, manuNameNGramsByCanonicalManuName);
 
                         const int PERFECT_MATCH = 100;
                         if (manuNameMatchScore == PERFECT_MATCH && product.Manufacturer == listing.Manufacturer)
                             continue; // Same manufacturer name so nothing to do
 
+                        if (manuNameMatchScore < _manufacturerNameCutoff)
+                            continue; // Names are too different
+
                         // 2) Check that the listing text contains the the product model
-                        var modelMatchScore = CompareListingTextToProductModel(tokenProbablities, modelShinglesByModelName.Result, listing.Title, product.Model);
+                        var modelMatchScore = ScoreListingTitleToProductModel(product.Model, listingTitleTokens, modelShinglesByModelName, tokenProbablities);
 
                         if (modelMatchScore < 0 + float.Epsilon)
                             continue; // No parts of the model name matched
 
-                        // Keep track of the best product model match for the current listing
-                        if (modelMatchScore < bestModelMatchScore)
+                        // 3) Track of the best product model match for the current listing
+                        if (modelMatchScore < bestScore)
                         {
-                            var canonical = product.Manufacturer;
-                            var alias = listing.Manufacturer;
-
-                            bestModelMatchScore = modelMatchScore;
-                            bestMatch = new PossibleAlias { Canonical = canonical, Alias = alias };
+                            bestScore = modelMatchScore;
+                            bestMatch = new PossibleAlias { Canonical = product.Manufacturer, Alias = listing.Manufacturer };
                         }
                     }
 
-                    // Add the possible alias scores together.
                     if (bestMatch != null)
                     {
-                        possibleAliasesByCanonical.AddOrUpdate(bestMatch, bestModelMatchScore, (key, old) => old + bestModelMatchScore);
+                        // Add or increase the scores for possible alias.
+                        possibleAliasesByCanonical.AddOrUpdate(bestMatch, bestScore, (key, old) => old + bestScore);
                     }
                 });
 
-            var percentileCutoff = (possibleAliasesByCanonical.Count > 1) ? possibleAliasesByCanonical.Values.ToList().FindPercentile(_possibleAliasPercentile) : 0F;
-
+            // Return an upper percentile of aliases
+            var percentileCutoff = (possibleAliasesByCanonical.Count > 1)
+                ? possibleAliasesByCanonical.Values.ToList().FindPercentile(_possibleAliasPercentile)
+                : 0F;
             return possibleAliasesByCanonical
                 .Where(x => x.Value > percentileCutoff)
                 .Select(x => new ManufacturerNameAlias(x.Key.Canonical, x.Key.Alias));
-        }
-
-        private static float CompareListingTextToProductModel(IDictionary<string, float> tokenProbablities, IDictionary<string, List<string>> modelShinglesByModelName, string listingText, string productModel)
-        {
-            List<string> modelShingles;
-            if (!modelShinglesByModelName.TryGetValue(productModel, out modelShingles))
-            {
-                return 0f;
-            }
-
-            var textTokens = new HashSet<string>(listingText.Split(null)); // null splits based on Unicode Char.IsWhiteSpace
-            var modelScore = 0f;
-            foreach (var nGram in modelShingles)
-            {
-                if (textTokens.Contains(nGram))
-                {
-                    // Use the token's inverse probability for a score for now
-                    // The more unlikely the token is the less likely this is an accidental match.
-                    modelScore += tokenProbablities.ContainsKey(nGram) ? 1 / tokenProbablities[nGram] : 0;
-                }
-            }
-
-            return modelScore;
         }
 
         private HashSet<string> GetCommonTokens(IDictionary<string, float> tokenFrequencies)
@@ -153,53 +136,61 @@ namespace Pipeline.Analysis
             return new HashSet<string>(tokenFrequencies.Where(x => x.Value > percentialCutoff).Select(x => x.Key));
         }
 
-        private static int CompareManufacturerNameSimilarity(IDictionary<string, List<string>> manuNameNGramsByCanonicalManuName, string listingManuName, string productManuName)
+        private static IDictionary<string, List<string>> GenerateModelShingles(HashSet<string> commonTokens, ICollection<Product> products)
         {
-            List<string> manuNameNGrams;
-            if (!manuNameNGramsByCanonicalManuName.TryGetValue(productManuName, out manuNameNGrams))
+            var modelShinglesByModelName = new Dictionary<string, List<string>>();
+            foreach(var model in products.Select(x => x.Model))
             {
-                return 0;
+                if (modelShinglesByModelName.ContainsKey(model)) { continue; }
+
+                var modelShingles = model
+                    .TokenizeOnWhiteSpace()
+                    .CreateNShingles(1, 2)
+                    .Where(x => !commonTokens.Contains(x)) // Throw away products with a model that is too common.  Ex: Gets rid of "zoom" model.
+                    .ToList();
+                modelShinglesByModelName.Add(model, modelShingles);
             }
-
-            var nameHit = 0;
-            foreach (var nGram in manuNameNGrams)
-            {
-                if (listingManuName.Contains(nGram))
-                {
-                    nameHit++;
-                }
-            }
-
-            return (100 * nameHit) / manuNameNGrams.Count;
-        }
-
-        private static IDictionary<string, List<string>> GenerateModelNameShingles(HashSet<string> commonTokens, ICollection<Product> products)
-        {
-            var modelShinglesByModelName = new ConcurrentDictionary<string, List<string>>();
-            products
-                .AsParallel()
-                .ForAll(product =>
-                {
-                    var modelShingles = product.Model.CreateUniBiTokenShingles()
-                        // Throw away products with a model that is too common.  Gets rid of "zoom" model.
-                        .Where(x => !commonTokens.Contains(x))
-                        .ToList();
-
-                    if (modelShingles.Any())
-                    {
-                        modelShinglesByModelName.TryAdd(product.Model, modelShingles);
-                    }
-                });
             return modelShinglesByModelName;
         }
 
-        private static IDictionary<string, List<string>> GenerateManufacturerNameNGrams(ICollection<Product> products)
+        private static Dictionary<string, List<string>> GenerateManufacturerNameNGrams(ICollection<Product> products)
         {
-            var manuNameNGramsByCanonicalManuName = new ConcurrentDictionary<string, List<string>>();
-            products
-                .AsParallel()
-                .ForAll(product => manuNameNGramsByCanonicalManuName.GetOrAdd(product.Manufacturer, x => x.CreateBiTriQuadCharacterNGrams().ToList()));
-            return manuNameNGramsByCanonicalManuName;
+            return products
+                .Select(x => x.Manufacturer)
+                .Distinct()
+                .ToDictionary(x => x, x => x.CreateNGrams(2, 4).ToList());
+        }
+
+        private static float ScoreListingTitleToProductModel(string productModel, HashSet<string> listingTitleTokens, IDictionary<string, List<string>> modelShinglesByModelName, IDictionary<string, float> tokenProbablities)
+        {
+            var modelShingles = modelShinglesByModelName.ContainsKey(productModel)
+                ? modelShinglesByModelName[productModel]
+                : Enumerable.Empty<string>();
+
+            return modelShingles
+                .Where(x => listingTitleTokens.Contains(x))
+
+                // Use the token's inverse probability for a score for now. The more unlikely the token is the less likely this is an accidental match.
+                .Select(x => tokenProbablities.ContainsKey(x) ? (1 / tokenProbablities[x]) : 0F)
+                .Sum();
+        }
+
+        /// <summary>
+        /// Returns a score based on how many product manufacturer name n-grams match the listing manufacturer name n-grams
+        /// </summary>
+        private static int ScoreManufacturerNameSimilarity(string productManuName, string listingManuName, IDictionary<string, List<string>> manuNameNGramsByCanonicalManuName)
+        {
+            var manuNameNGrams = manuNameNGramsByCanonicalManuName.ContainsKey(productManuName)
+                ? manuNameNGramsByCanonicalManuName[productManuName]
+                : Enumerable.Empty<string>();
+
+            var numMatchingNGrams = manuNameNGrams
+                .Where(x => listingManuName.Contains(x))
+                .Count();
+
+            return (numMatchingNGrams > 0 && manuNameNGrams.Count() > 0)
+                ? (100 * numMatchingNGrams) / manuNameNGrams.Count()
+                : 0;
         }
     }
 }

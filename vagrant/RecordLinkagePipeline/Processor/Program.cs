@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using Pipeline;
 using Pipeline.Shared;
 using Processor.IO;
@@ -13,9 +14,15 @@ namespace Processor
     {
         private static ConcurrentQueue<string> _linesToLog = new ConcurrentQueue<string>();
 
+        /// <summary>
+        /// Main entry point
+        /// Args:
+        ///     -- pretty-print for indented json output
+        /// </summary>
         public static void Main(string[] args)
         {
-            // TODO: Mono's PWD is different that .Net's. Find a cleaner way of doing this.
+            // KLUDGE: Mono's PWD is different that .Net's.
+            // TODO: Find a cleaner way of doing this.
             if (!IsMono())
             {
                 Directory.SetCurrentDirectory("../../../");
@@ -26,7 +33,17 @@ namespace Processor
             var pipeline = CreatePipeline(reader);
             var matches = FindMatches(reader, pipeline);
 
-            WriteOutput(matches);
+            var writer = new FileWriter();
+            writer.WriteLines(@"./log.txt", _linesToLog.Select(x => x));
+
+            WriteMatchesToFile(args, matches, writer);
+        }
+
+        private static void WriteMatchesToFile(string[] args, IEnumerable<ProductMatchDto> matches, FileWriter writer)
+        {
+            var outputFormatting = (args.Any() && args.Contains("--pretty-print")) ? Formatting.Indented : Formatting.None;
+            var output = matches.Select(x => JsonConvert.SerializeObject(x, outputFormatting));
+            writer.WriteLines(@"./results.txt", output);
         }
 
         private static bool IsMono()
@@ -44,30 +61,11 @@ namespace Processor
             return new ListingsToProductResolutionPipeline(log, config, erates, cameraTrainingSet, accessoryTrainingSet);
         }
 
-        private static IEnumerable<ProductMatch> FindMatches(FileReader reader, ListingsToProductResolutionPipeline pipeline)
+        private static IEnumerable<ProductMatchDto> FindMatches(FileReader reader, ListingsToProductResolutionPipeline pipeline)
         {
             var products = reader.ReadLines("./Resources/products.txt");
             var listings = reader.ReadLines("./Resources/listings.txt");
             return pipeline.FindMatches(products, listings);
-        }
-
-        private static void WriteOutput(IEnumerable<ProductMatch> matches)
-        {
-            var writer = new FileWriter();
-            writer.WriteLines(@"./log.txt", _linesToLog.Select(x => x));
-            writer.WriteLines(@"./results.txt", ToJSON(matches));
-        }
-
-        private static IEnumerable<string> ToJSON(IEnumerable<ProductMatch> matches)
-        {
-            foreach (var match in matches.Where(x => x.Listings.Any()))
-            {
-                yield return match.Product.Original;
-                foreach (var listing in match.Listings)
-                {
-                    yield return "\t" + listing.Original;
-                }
-            }
         }
     }
 }

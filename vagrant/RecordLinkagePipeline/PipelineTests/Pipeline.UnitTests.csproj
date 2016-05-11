@@ -59,10 +59,10 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="Analysis\TokenProbablityPerListingCalculatorTests.cs" />
+    <Compile Include="Analysis\TokenProbabilityCalculatorTests.cs" />
     <Compile Include="Analysis\SimilarityAliasGeneratorTests.cs" />
     <Compile Include="Classification\HeuristicClassifierTests.cs" />
-    <Compile Include="Extraction\FieldMungerTests.cs" />
+    <Compile Include="Infrastructure\FieldMungerTests.cs" />
     <Compile Include="Extraction\ExchangeRateParserTests.cs" />
     <Compile Include="Infrastructure\IEnumerableIntExtensionsTests.cs" />
     <Compile Include="Infrastructure\IListTExtensionsTests.cs" />
@@ -72,7 +72,6 @@
     <Compile Include="Infrastructure\IListDecimalExtensionsTests.cs" />
     <Compile Include="Matching\ProductModelMatcherTests.cs" />
     <Compile Include="Matching\ManufacturerListingsBlockGrouperTests.cs" />
-    <Compile Include="Analysis\WordFrequencyPerCollectionTests.cs" />
     <Compile Include="Extraction\ListingParserTests.cs" />
     <Compile Include="Extraction\ProductParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

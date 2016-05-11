@@ -1,7 +1,9 @@
 ﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pipeline.Classification;
+using Pipeline.Domain;
 using Pipeline.Extraction;
+using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
 namespace Pipeline.UnitTests.Classification
