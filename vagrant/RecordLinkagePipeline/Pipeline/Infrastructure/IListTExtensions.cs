@@ -19,10 +19,5 @@ namespace Pipeline.Infrastructure
             }
             return maxIdx;
         }
-
-        public static HashSet<T> ToHashSet<T>(this IList<T> list)
-        {
-            return new HashSet<T>(list);
-        }
     }
 }
