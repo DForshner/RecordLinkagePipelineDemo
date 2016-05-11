@@ -9,7 +9,7 @@ namespace Processor.IO
         public IEnumerable<string> ReadLines(string fileName, int? limit = null)
         {
             int count = 0;
-            using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 using (StreamReader reader = new StreamReader(file))
                 {
