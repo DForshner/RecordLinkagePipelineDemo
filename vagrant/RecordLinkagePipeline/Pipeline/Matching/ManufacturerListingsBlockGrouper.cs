@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using Pipeline.Analysis;
+using Pipeline.Domain;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
 
 namespace Pipeline.Matching
 {
+    /// <summary>
+    /// Groups (blocks) listings by manufacturer name.  If the listing's manufacturer name is not in the canonical list it will try to use an alias.
+    /// </summary>
     internal class ManufacturerListingsBlockGrouper
     {
         private readonly HashSet<string> _canonical;

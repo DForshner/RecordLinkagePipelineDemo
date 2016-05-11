@@ -1,9 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Pipeline.Domain;
 using Pipeline.Shared;
 
 namespace Pipeline.Matching
 {
+    /// <summary>
+    /// Groups (blocks) products by manufacturer name.
+    /// </summary>
     internal class ManufacturerProductsBlockGrouper
     {
         public IEnumerable<ManufacturerNameProductsBlock> Match(IEnumerable<Product> productsToMatch, IEnumerable<string> canonicalManufacturerNames)
