@@ -1,8 +1,8 @@
 ﻿
-namespace Pipeline.Shared
+namespace Pipeline.Domain
 {
     /// <summary>
-    /// Configuration for pipeline
+    /// Configuration for the pipeline
     /// </summary>
     internal class Config
     {

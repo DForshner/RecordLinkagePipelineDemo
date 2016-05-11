@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Pipeline.Shared
+namespace Pipeline.Domain
 {
-    public class Listing
+    internal class Listing
     {
         public string Manufacturer { get; set; }
 

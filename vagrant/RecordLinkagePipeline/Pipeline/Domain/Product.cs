@@ -1,7 +1,7 @@
 ﻿
-namespace Pipeline.Shared
+namespace Pipeline.Domain
 {
-    public class Product
+    internal class Product
     {
         public string Name { get; set; }
 

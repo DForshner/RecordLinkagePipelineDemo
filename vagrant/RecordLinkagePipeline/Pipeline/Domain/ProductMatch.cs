@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Pipeline.Shared
+namespace Pipeline.Domain
 {
     /// <summary>
     /// A product and its matching listings
     /// </summary>
-    public class ProductMatch
+    internal class ProductMatch
     {
         public Product Product { get; private set; }
         public ICollection<Listing> Listings { get; private set; }

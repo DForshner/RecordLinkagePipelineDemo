@@ -1,5 +1,5 @@
 ﻿
-namespace Pipeline.Shared
+namespace Pipeline.Domain
 {
     internal class ExchangeRate
     {
