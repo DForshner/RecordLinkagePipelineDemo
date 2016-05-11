@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Pipeline.Infrastructure
@@ -17,63 +18,27 @@ namespace Pipeline.Infrastructure
             return str.Split(null); // null splits based on Unicode Char.IsWhiteSpace
         }
 
-        /// <summary>
-        /// Generates character n-grams
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static IEnumerable<string> CreateBiTriQuadCharacterNGrams(this string str)
+        public static IEnumerable<string> CreateNGrams(this string tokens, int from, int to)
         {
-            for (var i = 0; i < str.Length - 1; i++)
-            {
-                yield return new string(new char[] { str[i], str[i + 1] });
-            }
-
-            for (var i = 0; i < str.Length - 2; i++)
-            {
-                yield return new string(new char[] { str[i], str[i + 1], str[i + 2] });
-            }
-
-            for (var i = 0; i < str.Length - 3; i++)
-            {
-                yield return new string(new char[] { str[i], str[i + 1], str[i + 2], str[i + 3] });
-            }
+            Debug.Assert(from > 0, "Expected min from value to be 1 uni-gram");
+            for (var i = from; i <= to; i++)
+                foreach (var ngram in CreateNGrams(tokens, i))
+                    yield return ngram;
         }
 
-        /// <summary>
-        /// Generates word/token shingles
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static IEnumerable<string> CreateUniBiTokenShingles(this string str)
+        private static IEnumerable<string> CreateNGrams(this string tokens, int n)
         {
-            var tokens = str.TokenizeOnWhiteSpace();
-
-            for (var i = 0; i < tokens.Length - 1; i++)
+            var tmp = new List<char>();
+            for (var i = 0; i < tokens.Length - (n - 1); i++)
             {
-                yield return tokens[i];
-                yield return tokens[i] + tokens[i + 1];
-            }
-
-            if (tokens.Length > 0)
-            {
-                yield return tokens[tokens.Length - 1];
-            }
-        }
-
-        /// <summary>
-        /// Generates word/token shingles
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static IEnumerable<string> CreateBiTriTokenShingles(this string str)
-        {
-            var tokens = str.TokenizeOnWhiteSpace();
-
-            for (var i = 0; i < tokens.Length - 1; i++)
-            {
-                yield return tokens[i] + tokens[i + 1];
-            }
-            for (var i = 0; i < tokens.Length - 2; i++)
-            {
-                yield return tokens[i] + tokens[i + 1] + tokens[i + 2];
+                tmp.Clear();
+                for (var j = 0; j < n; j++)
+                {
+                    tmp.Add(tokens[i + j]);
+                }
+                yield return string.Concat(tmp);
             }
         }
     }
