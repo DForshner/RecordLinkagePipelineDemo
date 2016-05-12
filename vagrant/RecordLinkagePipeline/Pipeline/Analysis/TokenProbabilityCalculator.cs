@@ -13,7 +13,7 @@ namespace Pipeline.Analysis
     /// </summary>
     internal static class TokenProbabilityCalculator
     {
-        public static Dictionary<string, float> GetProbabilities<T>(IEnumerable<T> docs, Func<T, string> selector)
+        public static IDictionary<string, float> GetProbabilities<T>(IEnumerable<T> docs, Func<T, string> selector)
         {
             var freqByToken = new ConcurrentDictionary<string, int>();
             var numDocs = 0;
