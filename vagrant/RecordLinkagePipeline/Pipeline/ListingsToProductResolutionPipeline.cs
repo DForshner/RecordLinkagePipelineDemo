@@ -105,6 +105,9 @@ namespace Pipeline
             return listingBlocks.Item1;
         }
 
+        /// <summary>
+        /// Remove non camera listings (accessories, batteries etc.)
+        /// </summary>
         private IEnumerable<ManufacturerNameListingsBlock> PruneListingBlocks(IEnumerable<ManufacturerNameListingsBlock> listingBlocks)
         {
             _log("Pruning listings blocked by manufacturer name");
@@ -113,7 +116,10 @@ namespace Pipeline
             {
                 var afterNaiveBayes = PruneByNaiveBayes(block);
 
-                yield return afterNaiveBayes;
+                // I'm not terribly happy with this step.  Generating heuristics was a trial and error process that's probably going to break as soon as more non-English listings are added.
+                var afterHeuristicPruning = PruneByHeuristic(afterNaiveBayes);
+
+                yield return afterHeuristicPruning;
             }
         }
 
@@ -132,7 +138,24 @@ namespace Pipeline
                 .Where(x => x.IsCamera)
                 .Select(x => x.Listing)
                 .ToList();
+            return new ManufacturerNameListingsBlock(block.ManufacturerName, cameras);
+        }
 
+        private ManufacturerNameListingsBlock PruneByHeuristic(ManufacturerNameListingsBlock block)
+        {
+            var withClassification = block.Listings
+                .Select(x => new { Listing = x, IsCamera = _heuristicClassifier.IsCamera(x) })
+                .ToList();
+
+            foreach (var x in withClassification.Where(x => !x.IsCamera))
+            {
+                _log(String.Format("Pruned by heuristic: [{0}] => {1}, {2} {3}", block.ManufacturerName, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
+            }
+
+            var cameras = withClassification
+                .Where(x => x.IsCamera)
+                .Select(x => x.Listing)
+                .ToList();
             return new ManufacturerNameListingsBlock(block.ManufacturerName, cameras);
         }
 
@@ -181,33 +204,10 @@ namespace Pipeline
 
             foreach(var match in possibleMatches)
             {
-                // I'm not terribly happy with this step.  Generating heuristics was a trial and error process that's probably going to break as soon as more non-English listings are added.
-                var afterHeuristicPruning = PruneByHeuristic(match);
-
                 // The price outlier classifier has to be occur after the other classifiers.  Somewhat ironically the price outlier classifier is itself
                 // susceptible to large numbers of outliers.  When there is too much variation in values the range ends up being so large that everything appears to be a typical value.
-                var afterPriceOutlierPruning = PruneByPriceOutliers(afterHeuristicPruning);
-
-                yield return afterPriceOutlierPruning;
+                yield return PruneByPriceOutliers(match);
             }
-        }
-
-        private ProductMatch PruneByHeuristic(ProductMatch match)
-        {
-            var withClassification =  match.Listings
-                .Select(x => new { Listing = x, IsCamera = _heuristicClassifier.IsCamera(x) })
-                .ToList();
-
-            foreach(var x in withClassification.Where(x => !x.IsCamera))
-            {
-                _log(String.Format("Pruned by heuristic: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
-            }
-
-            var cameras = withClassification
-                .Where(x => x.IsCamera)
-                .Select(x => x.Listing)
-                .ToList();
-            return new ProductMatch(match.Product, cameras);
         }
 
         private ProductMatch PruneByPriceOutliers(ProductMatch match)
