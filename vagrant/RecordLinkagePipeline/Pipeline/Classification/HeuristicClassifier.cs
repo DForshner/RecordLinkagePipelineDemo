@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using Pipeline.Domain;
 using Pipeline.Infrastructure;
-using Pipeline.Shared;
 
 namespace Pipeline.Classification
 {
