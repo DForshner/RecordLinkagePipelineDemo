@@ -95,7 +95,7 @@ namespace Pipeline
         {
             _log("Blocking listings by manufacturer name");
 
-            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);
+            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings.Select(x => x.Title));
             var aliases = _aliases.Generate(products, listings, probablityPerToken);
             var listingBlockGrouper = new ManufacturerListingsBlockGrouper(canonicalManufacturerNames, aliases);
             var listingBlocks = listingBlockGrouper.Match(listings);

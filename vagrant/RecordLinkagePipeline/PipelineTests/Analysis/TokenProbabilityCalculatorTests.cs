@@ -22,7 +22,7 @@ namespace Pipeline.UnitTests.Analysis
                 new Listing { Title = "A B" },
                 new Listing { Title = "" },
             };
-            var result = TokenProbabilityCalculator.GetProbabilities(docs, x => x.Title);
+            var result = TokenProbabilityCalculator.GetProbabilities(docs.Select(x => x.Title));
 
             Assert.AreEqual(6F / 7F, result["A"], 0.01D);
             Assert.AreEqual(2F / 7F, result["F"], 0.01D);

@@ -29,7 +29,7 @@ namespace Pipeline.UnitTests.Classification
                 new Listing { Title = "green bag" },
                 new Listing { Title = "lens for model7 model6 model5" },
             };
-            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);
+            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings.Select(x => x.Title));
 
             var result = new TermUniquenessDistributionClassifier().ClassifyAsCamera(probablityPerToken, camera);
 
@@ -54,7 +54,7 @@ namespace Pipeline.UnitTests.Classification
                 new Listing { Title = "lens for model7 model6 model5" },
                 accessory
             };
-            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings, x => x.Title);;
+            var probablityPerToken = TokenProbabilityCalculator.GetProbabilities(listings.Select(x => x.Title));
 
             var result = new TermUniquenessDistributionClassifier().ClassifyAsCamera(probablityPerToken, accessory);
 
