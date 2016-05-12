@@ -57,6 +57,7 @@
   <ItemGroup>
     <Compile Include="IO\FileWriter.cs" />
     <Compile Include="IO\FileReader.cs" />
+    <Compile Include="Log\Logger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
