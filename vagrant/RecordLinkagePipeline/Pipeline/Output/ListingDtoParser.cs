@@ -15,7 +15,7 @@ namespace Pipeline.Output
             return new ListingDto
             {
                 Manufacturer = (string)jsonObj["manufacturer"],
-                Price = Decimal.Parse((string)jsonObj["price"]),
+                Price = (string)jsonObj["price"],
                 CurrencyCode = (string)jsonObj["currency"],
                 Title = (string)jsonObj["title"],
             };

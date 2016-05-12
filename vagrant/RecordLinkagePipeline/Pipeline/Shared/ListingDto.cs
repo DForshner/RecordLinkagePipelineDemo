@@ -12,7 +12,7 @@ namespace Pipeline.Shared
         public string CurrencyCode { get; set; }
 
         [JsonProperty(PropertyName = "price")]
-        public Decimal Price { get; set; }
+        public string Price { get; set; }
 
         [JsonProperty(PropertyName = "title")]
         public string Title { get; set; }
