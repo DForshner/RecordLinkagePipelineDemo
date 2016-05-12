@@ -57,7 +57,7 @@
     <Compile Include="Infrastructure\IDictionaryExtensions.cs" />
     <Compile Include="Output\ListingDtoParser.cs" />
     <Compile Include="Output\ProductMatchDtoMapper.cs" />
-    <Compile Include="Infrastructure\IEnumerableExtensions.cs" />
+    <Compile Include="Infrastructure\IEnumerableTExtensions.cs" />
     <Compile Include="Domain\Config.cs" />
     <Compile Include="Extraction\ConfigParser.cs" />
     <Compile Include="Infrastructure\FieldMunger.cs" />
