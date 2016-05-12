@@ -13,8 +13,7 @@ namespace Pipeline.Analysis
                 var tokens = doc.TokenizeOnWhiteSpace();
                 foreach (var token in tokens)
                 {
-                    if (!freq.ContainsKey(token)) { freq.Add(token, 0); }
-                    freq[token] += 1;
+                    freq.AddOrIncrement(token);
                 }
             }
             return freq;
