@@ -54,7 +54,9 @@ namespace Pipeline
 
             var listingBlocks = BlockListingsByManufacturer(products, listings, canonicalManufacturerNames);
 
-            var possibleMatches = MatchListingsToProduct(listingBlocks, productBlocks);
+            var prunedListingBlocks = PruneListingBlocks(listingBlocks);
+
+            var possibleMatches = MatchListingsToProduct(prunedListingBlocks, productBlocks);
 
             var matches = PruneMatches(possibleMatches);
 
@@ -103,6 +105,37 @@ namespace Pipeline
             return listingBlocks.Item1;
         }
 
+        private IEnumerable<ManufacturerNameListingsBlock> PruneListingBlocks(IEnumerable<ManufacturerNameListingsBlock> listingBlocks)
+        {
+            _log("Pruning listings blocked by manufacturer name");
+
+            foreach (var block in listingBlocks)
+            {
+                var afterNaiveBayes = PruneByNaiveBayes(block);
+
+                yield return afterNaiveBayes;
+            }
+        }
+
+        private ManufacturerNameListingsBlock PruneByNaiveBayes(ManufacturerNameListingsBlock block)
+        {
+            var withClassification = block.Listings
+                .Select(x => new { Listing = x, IsCamera = _naiveBayesClassifier.IsCamera(x) })
+                .ToList();
+
+            foreach (var x in withClassification.Where(x => !x.IsCamera))
+            {
+                _log(String.Format("Pruned by Naive Bayes: [{0}] => {1}, {2} {3}", block.ManufacturerName, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
+            }
+
+            var cameras = withClassification
+                .Where(x => x.IsCamera)
+                .Select(x => x.Listing)
+                .ToList();
+
+            return new ManufacturerNameListingsBlock(block.ManufacturerName, cameras);
+        }
+
         private IEnumerable<ProductMatch> MatchListingsToProduct(IEnumerable<ManufacturerNameListingsBlock> listingBlocks, IEnumerable<ManufacturerNameProductsBlock> productBlocks)
         {
             _log("Matching listings to products");
@@ -144,14 +177,12 @@ namespace Pipeline
         /// </summary>
         private IEnumerable<ProductMatch> PruneMatches(IEnumerable<ProductMatch> possibleMatches)
         {
-            _log(String.Format("Pruning {0} matches", possibleMatches.Count()));
+            _log("Pruning product matches");
 
             foreach(var match in possibleMatches)
             {
-                var afterBayesPruning = PruneByNaiveBayes(match);
-
                 // I'm not terribly happy with this step.  Generating heuristics was a trial and error process that's probably going to break as soon as more non-English listings are added.
-                var afterHeuristicPruning = PruneByHeuristic(afterBayesPruning);
+                var afterHeuristicPruning = PruneByHeuristic(match);
 
                 // The price outlier classifier has to be occur after the other classifiers.  Somewhat ironically the price outlier classifier is itself
                 // susceptible to large numbers of outliers.  When there is too much variation in values the range ends up being so large that everything appears to be a typical value.
@@ -159,24 +190,6 @@ namespace Pipeline
 
                 yield return afterPriceOutlierPruning;
             }
-        }
-
-        private ProductMatch PruneByNaiveBayes(ProductMatch match)
-        {
-            var withClassification =  match.Listings
-                .Select(x => new { Listing = x, IsCamera = _naiveBayesClassifier.IsCamera(x) })
-                .ToList();
-
-            foreach(var x in withClassification.Where(x => !x.IsCamera))
-            {
-                _log(String.Format("Pruned by Naive Bayes: [{0}, {1}, {2}] => {3}, {4} {5}", match.Product.Manufacturer, match.Product.Family, match.Product.Model, x.Listing.Title, x.Listing.Price, x.Listing.CurrencyCode));
-            }
-
-            var cameras = withClassification
-                .Where(x => x.IsCamera)
-                .Select(x => x.Listing)
-                .ToList();
-            return new ProductMatch(match.Product, cameras);
         }
 
         private ProductMatch PruneByHeuristic(ProductMatch match)
