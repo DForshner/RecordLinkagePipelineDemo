@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Pipeline.Domain;
 using Pipeline.Infrastructure;
-using Pipeline.Shared;
 
 namespace Pipeline.Matching
 {
@@ -13,8 +13,7 @@ namespace Pipeline.Matching
     /// </summary>
     internal class ProductModelMatcher
     {
-        public Tuple<IEnumerable<ProductMatch>, IEnumerable<Listing>> FindProductMatches(
-            ManufacturerNameListingsBlock listingBlock, ManufacturerNameProductsBlock productBlock)
+        public Tuple<IEnumerable<ProductMatch>, IEnumerable<Listing>> FindProductMatches(ManufacturerNameListingsBlock listingBlock, ManufacturerNameProductsBlock productBlock)
         {
             Debug.Assert(listingBlock.ManufacturerName == productBlock.ManufacturerName, "Expected same manufacturer name");
 
@@ -38,12 +37,11 @@ namespace Pipeline.Matching
                 var tokens = listing.Title.TokenizeOnWhiteSpace();
                 var ngrams = tokens.CreateNShingles(1, Math.Min(tokens.Length, 3)).ToList();
 
-                ngrams.ForEach(x => AddOrIncrement(tokenCount, x));
+                ngrams.ForEach(x => tokenCount.AddOrIncrement(x));
 
                 listings.Add(Tuple.Create(listing, ngrams));
             }
 
-            //var totalTokens = tokenCount.Values.Sum();
             var totalTokens = listingBlock.Listings.Count;
 
             var productMatches = new Dictionary<Product, List<Listing>>();
@@ -65,6 +63,7 @@ namespace Pipeline.Matching
                     }
                     var modelScore = modelMatches.Select(x => tokenCount[x]).CalculateEntropy(totalTokens);
 
+                    // Only look for family tokens that are not already contained in the model
                     var familyTokens = product.Item3.Where(x => !modelTokens.Contains(x));
                     var familyMatches = listingTokens.Where(x => familyTokens.Contains(x)).ToList();
                     var familyScore = familyMatches.Select(x => tokenCount[x]).CalculateEntropy(totalTokens);
@@ -78,12 +77,13 @@ namespace Pipeline.Matching
                     // We should be able to arrange the matching fragments in such a way that the product's
                     // model and family can be produced.  For now I'm just going to check that there are enough characters
                     // to fully produce the model and family.
-                    if (!CheckMatchesHaveCharsToMakeString(product.Item1.Model, modelMatches.Concat(familyMatches)))
+                    if (!CheckFragmentsCouldMakeString(product.Item1.Model, modelMatches.Concat(familyMatches)))
                     {
                         continue;
                     }
 
-                    if (familyMatches.Any() && !CheckMatchesHaveCharsToMakeString(product.Item1.Family, modelMatches.Concat(familyMatches)))
+                    // TODO: Excluding listings that don't contain the family may be too aggressive.
+                    if (familyMatches.Any() && !CheckFragmentsCouldMakeString(product.Item1.Family, modelMatches.Concat(familyMatches)))
                     {
                         continue;
                     }
@@ -108,45 +108,36 @@ namespace Pipeline.Matching
         }
 
         /// <summary>
-        /// Check that the matching fragments have enough character occurrences to make the model.
+        /// Check that if the fragments are arranged in an overlapping fashion they could produce the target string.
         /// </summary>
-        private static bool CheckMatchesHaveCharsToMakeString(string requiredChars, IEnumerable<string> fragments)
+        private static bool CheckFragmentsCouldMakeString(string target, IEnumerable<string> fragments)
         {
-            if (String.IsNullOrEmpty(requiredChars)) { return true; }
+            if (String.IsNullOrEmpty(target)) { return true; }
 
-            var fragementChars = new Dictionary<char, int>();
-            foreach (var fragment in fragments)
+            var requiredChars = new string(target.Where(x => !Char.IsWhiteSpace(x)).ToArray());
+            var isCharCovered = new BitArray(requiredChars.Length);
+
+            // Slide each fragment over the string and when the fragment lines up mark the characters that are covered by the fragment.
+            foreach(var fragment in fragments)
             {
-                foreach (var c in fragment)
+                var startIdx = requiredChars.IndexOf(fragment);
+                if (startIdx < 0) { continue; }
+
+                // The fragment exists in the string so mark the characters as covered
+                for(var i = startIdx; i < (startIdx + fragment.Length); ++i)
                 {
-                    if (fragementChars.ContainsKey(c))
-                        fragementChars[c]++;
-                    else
-                        fragementChars.Add(c, 1);
+                    isCharCovered[i] = true;
                 }
             }
 
-            foreach (var c in requiredChars)
+            // See if any character weren't covered by the fragments
+            foreach(bool isCovered in isCharCovered)
             {
-                if (char.IsWhiteSpace(c)) { continue; }
-
-                if (!fragementChars.ContainsKey(c) || fragementChars[c] <= 0)
-                {
+                if (!isCovered)
                     return false;
-                }
-
-                fragementChars[c]--;
             }
 
             return true;
-        }
-
-        void AddOrIncrement(IDictionary<string, int> toUpdate, string key)
-        {
-            if (toUpdate.ContainsKey(key))
-                toUpdate[key]++;
-            else
-                toUpdate.Add(key, 1);
         }
     }
 }
