@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="Analysis\TokenProbabilityCalculator.cs" />
     <Compile Include="Analysis\SimilarityAliasGenerator.cs" />
+    <Compile Include="Analysis\WordFrequencyCalculator.cs" />
     <Compile Include="Classification\NaiveBayesCameraClassifier.cs" />
     <Compile Include="Infrastructure\IDictionaryExtensions.cs" />
     <Compile Include="Output\ListingDtoParser.cs" />

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Pipeline.Analysis;
 using Pipeline.Domain;
 using Pipeline.Infrastructure;
 using Pipeline.Shared;
@@ -41,8 +42,8 @@ namespace Pipeline.Classification
             _accessoryTrainingSet = accessoryTrainingSet;
             _minNumWords = minNumWords;
             _wordRatio = wordRatio;
-            _cameraWordFreq = GetWordFrequency(cameraTrainingSet);
-            _accessoryWordFreq = GetWordFrequency(accessoryTrainingSet);
+            _cameraWordFreq = WordFrequencyCalculator.GetWordFrequency(cameraTrainingSet);
+            _accessoryWordFreq = WordFrequencyCalculator.GetWordFrequency(accessoryTrainingSet);
             _totalTerms = _cameraWordFreq.Values.Sum() + _accessoryWordFreq.Values.Sum();
         }
 
@@ -102,21 +103,6 @@ namespace Pipeline.Classification
 
             // Q ratio to tells us how likely this a camera listing given the token occurred
             return !probAccessoryGivenToken.IsNearZero() ? (probCameraGivenToken / probAccessoryGivenToken) : float.PositiveInfinity;
-        }
-
-        private static IDictionary<string, int> GetWordFrequency(IEnumerable<string> docs)
-        {
-            var freq = new Dictionary<string, int>();
-            foreach (var doc in docs)
-            {
-                var tokens = doc.TokenizeOnWhiteSpace();
-                foreach (var token in tokens)
-                {
-                    if (!freq.ContainsKey(token)) { freq.Add(token, 0); }
-                    freq[token] += 1;
-                }
-            }
-            return freq;
         }
     }
 }
