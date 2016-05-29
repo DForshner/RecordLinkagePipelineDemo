@@ -46,9 +46,9 @@ namespace Processor
 
                 WriteMatchesToFile(args, matches, logger);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                logger.Log("Exception occurred" +  ex.Message);
+                logger.Log("Exception occurred" + ex.Message);
             }
 
             logger.Log("End");
