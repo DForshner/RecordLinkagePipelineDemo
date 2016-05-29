@@ -3,7 +3,7 @@ using Pipeline.Shared;
 
 namespace Processor.IO
 {
-    public class FileWriter : ITextWriter
+    public class FileWriter
     {
         public void WriteLines(string fileName, IEnumerable<string> lines)
         {

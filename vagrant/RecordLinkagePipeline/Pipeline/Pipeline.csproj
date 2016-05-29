@@ -76,8 +76,6 @@
     <Compile Include="Classification\ProductPriceOutlierClassifer.cs" />
     <Compile Include="Classification\HeuristicClassifier.cs" />
     <Compile Include="Domain\ExchangeRate.cs" />
-    <Compile Include="Shared\ITextReader.cs" />
-    <Compile Include="Shared\ITextWriter.cs" />
     <Compile Include="Matching\ManufacturerNameProductsBlock.cs" />
     <Compile Include="Shared\ListingDto.cs" />
     <Compile Include="Shared\ProductMatchDto.cs" />
