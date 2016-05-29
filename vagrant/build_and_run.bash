@@ -5,14 +5,14 @@ set -e
 
 echo "--- build_and_run.bash - Start ---"
 
-echo -e "----------------------------------------------- Change to solution dir"
+echo "----------------------------------------------- Change to solution dir"
 cd /vagrant/vagrant/RecordLinkagePipeline
 echo pwd
 
-echo -e "----------------------------------------------- Compile"
+echo "----------------------------------------------- Compile"
 xbuild /p:Configuration="DebugMono"
 
-echo -e "----------------------------------------------- Run"
+echo "----------------------------------------------- Run"
 mono Processor/bin/DebugMono/Processor.exe --config-file ./Resources/config.json --exchange-rate-file ./Resources/exchangeRates.json --camera-training-set-file ./Resources/cameraTrainingSet.txt --accessory-training-set-file ./Resources/accessoryTrainingSet.txt --products-file ./Resources/products.txt --listings-file ./Resources/listings.txt
 
 echo "--- build_and_run.bash - End ---"
