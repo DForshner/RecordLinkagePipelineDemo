@@ -3,16 +3,16 @@
 # Exit if simple command fails
 set -e
 
-echo "\e[92m --- build_and_run.bash - Start --- \e[0m"
+echo "--- build_and_run.bash - Start ---"
 
-echo -e "\e[32m ----------------------------------------------- Change to solution dir \e[0m"
+echo -e "----------------------------------------------- Change to solution dir"
 cd /vagrant/vagrant/RecordLinkagePipeline
 echo pwd
 
-echo -e "\e[32m ----------------------------------------------- Compile  \e[0m"
+echo -e "----------------------------------------------- Compile"
 xbuild /p:Configuration="DebugMono"
 
-echo -e "\e[32m ----------------------------------------------- Run \e[0m"
-mono Processor/bin/DebugMono/Processor.exe
+echo -e "----------------------------------------------- Run"
+mono Processor/bin/DebugMono/Processor.exe --config-file ./Resources/config.json --exchange-rate-file ./Resources/exchangeRates.json --camera-training-set-file ./Resources/cameraTrainingSet.txt --accessory-training-set-file ./Resources/accessoryTrainingSet.txt --products-file ./Resources/products.txt --listings-file ./Resources/listings.txt
 
-echo "\e[92m --- build_and_run.bash - End --- \e[0m"
+echo "--- build_and_run.bash - End ---"

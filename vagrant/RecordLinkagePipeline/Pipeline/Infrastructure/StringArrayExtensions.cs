@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -28,6 +29,20 @@ namespace Pipeline.Infrastructure
                 }
                 yield return string.Concat(tmp);
             }
+        }
+
+        /// <summary>
+        /// Returns index of first element where predicate is true.
+        /// </summary>
+        /// <returns>-1 if no element matches predicate</returns>
+        public static int FindIndex(this string[] arr, Func<string, bool> predicate)
+        {
+            for (var i = 0; i < arr.Length; i++)
+            {
+                if (predicate(arr[i]))
+                    return i;
+            }
+            return -1; // Not found
         }
     }
 }
