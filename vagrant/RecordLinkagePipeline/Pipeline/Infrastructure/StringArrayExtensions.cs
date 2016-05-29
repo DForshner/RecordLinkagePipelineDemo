@@ -7,6 +7,9 @@ namespace Pipeline.Infrastructure
 {
     public static class StringArrayExtensions
     {
+        /// <summary>
+        /// Create shingles (word n-grams) from an array of strings.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<string> CreateNShingles(this string[] tokens, int from, int to)
         {
@@ -16,6 +19,9 @@ namespace Pipeline.Infrastructure
                     yield return ngram;
         }
 
+        /// <summary>
+        /// Create shingles (word n-grams) from an array of strings.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<string> CreateNShingles(this string[] tokens, int n)
         {
