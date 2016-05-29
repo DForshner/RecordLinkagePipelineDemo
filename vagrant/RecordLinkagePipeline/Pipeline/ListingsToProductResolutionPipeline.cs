@@ -75,12 +75,9 @@ namespace Pipeline
                 catch (Exception ex)
                 {
                     _log(String.Format("Failed to parse: {0} because {1}", line, ex.Message));
+                    continue;
                 }
-
-                if (result != null)
-                {
-                    yield return result;
-                }
+                yield return result;
             }
         }
 
@@ -100,7 +97,10 @@ namespace Pipeline
             var listingBlockGrouper = new ManufacturerListingsBlockGrouper(canonicalManufacturerNames, aliases);
             var listingBlocks = listingBlockGrouper.Match(listings);
 
-            foreach (var unmatched in listingBlocks.Item2) { _log(String.Format("Failed to match listing manufacturer: {0}, {1}", unmatched.Manufacturer, unmatched.Title)); }
+            foreach (var unmatched in listingBlocks.Item2)
+            {
+                _log(String.Format("Failed to match listing manufacturer: {0}, {1}", unmatched.Manufacturer, unmatched.Title)); 
+            }
 
             return listingBlocks.Item1;
         }
